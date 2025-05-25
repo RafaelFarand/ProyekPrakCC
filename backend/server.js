@@ -29,7 +29,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware
 app.use(cors({
-    origin: 'https://fe-040-dot-f-01-450707.uc.r.appspot.com/',
+    origin: 'https://fe-040-dot-f-01-450707.uc.r.appspot.com',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
