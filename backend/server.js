@@ -28,21 +28,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middleware
-const allowedOrigins = [
-    'https://fe-040-dot-f-01-450707.uc.r.appspot.com',
-    'http://localhost:5500',
-    'http://127.0.0.1:5500'
-];
-
 app.use(cors({
-    origin: function (origin, callback) {
-        // Izinkan request tanpa origin (seperti dari Postman atau mobile apps) atau jika origin ada di dalam daftar
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: 'https://fe-040-dot-f-01-450707.uc.r.appspot.com',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
