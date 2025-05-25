@@ -27,7 +27,7 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Middleware
+// Middleware - PASTIKAN CORS PALING ATAS
 app.use(cors({
     origin: 'https://fe-040-dot-f-01-450707.uc.r.appspot.com',
     credentials: true,
@@ -58,7 +58,7 @@ app.use(router);
 // Global error handler
 app.use((err, req, res, next) => {
     console.error('Global Error:', err);
-    res.status(500).json({ 
+    res.status(500).json({
         message: 'Internal Server Error',
         error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
     });
@@ -73,13 +73,13 @@ app.use((err, req, res, next) => {
         // Sync dengan alter untuk update schema existing tables
         await db.sync({ alter: true });
         console.log("All models synchronized successfully");
-        
+
         console.log("Available tables:");
         console.log("- users");
         console.log("- spareparts");
         console.log("- form_pembelian (legacy)");
         console.log("- cart (new cart/order system)");
-        
+
     } catch (error) {
         console.error("Database connection or sync failed:", error);
         process.exit(1);
