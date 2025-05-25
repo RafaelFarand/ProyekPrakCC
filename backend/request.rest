@@ -1,0 +1,44 @@
+get http://localhost:5000/notes
+
+###
+
+POST  http://localhost:5000/tambahdata
+Content-Type: application/json
+
+{
+    "nama":"messi goat",
+    "judul":"goal",
+    "catatan":"ankara messi ankara messi ankara messi, gol gol gol gol"
+    
+}
+
+
+
+###
+
+PUT http://localhost:5000/edit-user/3
+Content-Type: application/json
+
+
+{
+
+    "judul": "ankara"
+}
+
+
+###
+
+DELETE  http://localhost:5000/delete-user/3
+
+
+###
+
+POST  http://localhost:5000/register
+Content-Type: application/json
+
+{
+    "email":"alan@gmail.com",
+    "password":"goal",
+    "confPassword":"goal"
+    
+}
