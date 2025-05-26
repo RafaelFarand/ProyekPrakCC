@@ -2,13 +2,17 @@ import User from '../models/usermodel.js'; // Import model User dari sequelize
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-// Database connection
-try {
-    await db.authenticate();
-    console.log("✅ Database connected successfully");
-} catch (error) {
-    console.error("❌ Database connection error:", error.message);
-}
+// Database connection and synchronization
+(async () => {
+    try {
+        await db.authenticate();
+        console.log("✅ Database connected successfully");
+        await db.sync({ alter: true }); // Sinkronisasi model dengan database
+        console.log("✅ Models synchronized");
+    } catch (error) {
+        console.error("❌ Database connection or sync failed:", error.message);
+    }
+})();
 
 // Get all users
 async function getUser(req, res) {
