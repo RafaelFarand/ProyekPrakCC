@@ -103,26 +103,29 @@ async function register(req, res) {
 
   } catch (error) {
     console.error("❌ ERROR di register:", error);
-    
+
     // Handle specific Sequelize errors
     if (error.name === 'SequelizeValidationError') {
-      return res.status(400).json({
-        status: "Error",
-        message: "Data tidak valid",
-        details: error.errors.map(err => err.message)
-      });
-    }
-    
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({
-        status: "Error",
-        message: "Email atau username sudah digunakan"
-      });
+        return res.status(400).json({
+            status: "Error",
+            message: "Data tidak valid",
+            details: error.errors.map(err => err.message)
+        });
     }
 
-    res.status(500).json({ 
+    if (error.name === 'SequelizeUniqueConstraintError') {
+        return res.status(400).json({
+            status: "Error",
+            message: "Email atau username sudah digunakan"
+        });
+    }
+
+    // Tambahkan log stack trace untuk debugging
+    console.error("❌ Stack Trace:", error.stack);
+
+    res.status(500).json({
         status: "Error",
-        message: "Internal server error", 
+        message: "Internal server error",
         error: error.message
     });
   }
