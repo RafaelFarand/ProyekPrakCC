@@ -21,61 +21,33 @@ async function getUser(req, res) {
 // Register new user
 async function register(req, res) {
   try {
-    console.log('=== Register request body ===', req.body);
-
+    console.log('Request body:', req.body);
     const { email, username, password } = req.body;
 
-    // Validasi input
     if (!email || !username || !password) {
-      return res.status(400).json({
-        status: "Error",
-        message: "Email, username, dan password wajib diisi"
-      });
+      return res.status(400).json({ message: 'Data tidak lengkap' });
     }
 
-    // Check if user with this email already exists
-    const existingUser = await User.findOne({
-      where: { email }
-    });
-
+    // Cek user
+    const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ 
-        status: "Error", 
-        message: "Email sudah terdaftar" 
-      });
+      return res.status(400).json({ message: 'Email sudah terdaftar' });
     }
 
-    // Hash the password
-    const encryptPassword = await bcrypt.hash(password, 5);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 5);
 
-    // Create new user
-    const newUser = await User.create({
-      email,
-      username,
-      password: encryptPassword,
-      refresh_token: null,
-      role: 'customer' // Default role
-    });
+    // Create user
+    const newUser = await User.create({ email, username, password: hashedPassword, role: 'customer' });
 
-    // Return success but don't include password in response
-    const { password: _, ...userWithoutPassword } = newUser.toJSON();
-
-    res.status(201).json({
-      status: "Success",
-      message: "Registrasi berhasil",
-      data: userWithoutPassword
-    });
+    res.status(201).json({ message: 'User dibuat', userId: newUser.id });
 
   } catch (error) {
-    console.error('❌ Register error:', error);
-    res.status(500).json({ 
-      status: "Error", 
-      message: "Gagal registrasi",
-      error: error.message,
-      stack: error.stack
-    });
+    console.error('Error register:', error);
+    res.status(500).json({ message: error.message });
   }
 }
+
 
 async function login(req, res) {
   try {
