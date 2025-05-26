@@ -22,50 +22,55 @@ async function getUser(req, res) {
 async function register(req, res) {
   try {
     const { email, username, password } = req.body;
-    
-    // Check if user with this email already exists
-    const existingUser = await User.findOne({
-      where: {
-        email: email
-      }
-    });
-    
-    if (existingUser) {
-      return res.status(400).json({ 
-        status: "Error", 
-        message: "Email already registered" 
+
+    // Validasi field
+    if (!email || !username || !password) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Semua field (email, username, password) wajib diisi"
       });
     }
-    
-    // Hash the password
-    const encryptPassword = await bcrypt.hash(password, 5);
-    
-    // Create new user
+
+    // Cek apakah user sudah terdaftar
+    const existingUser = await User.findOne({ where: { email } });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Email sudah terdaftar"
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10); // Gunakan 10 untuk standar keamanan
+
+    // Simpan user
     const newUser = await User.create({
       email,
       username,
-      password: encryptPassword,
+      password: hashedPassword,
       refresh_token: null,
-      role: 'customer' // Default role
-  });
-    
-    // Return success but don't include password in response
-    const { password: _, ...userWithoutPassword } = newUser.toJSON();
-    
+      role: "customer"
+    });
+
+    const { password: _, ...userData } = newUser.toJSON();
+
     res.status(201).json({
       status: "Success",
-      message: "Registration successful",
-      data: userWithoutPassword
+      message: "Registrasi berhasil",
+      data: userData
     });
-    
+
   } catch (error) {
-    console.log(error.message);
-    res.status(500).json({ 
-      status: "Error", 
-      message: error.message 
+    console.error("❌ Error saat register:", error); // Log lengkap
+    res.status(500).json({
+      status: "Error",
+      message: "Terjadi kesalahan di server",
+      error: error.message
     });
   }
 }
+
 
 async function login(req, res) {
     try {
