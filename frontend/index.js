@@ -1,4 +1,4 @@
-const API_URL = "https://notes-651881126563.us-central1.run.app";
+const API_URL = "http://localhost:5000"; // Ganti dengan URL backend Anda
 let accessToken = "";
 let currentUserId = null;
 let currentUserRole = "customer";
@@ -8,7 +8,6 @@ let editingSparepartId = null;
 axios.defaults.withCredentials = true;
 
 // Setup axios interceptors untuk otomatis handle token refresh
-// Kode ini diasumsikan sudah ada dan berfungsi dari file PDF sebelumnya
 axios.interceptors.request.use(
     (config) => {
         if (accessToken) {
@@ -195,7 +194,7 @@ async function apiCall(method, endpoint, data = null, isFormData = false) {
     try {
         const config = {
             method,
-            url: `${API_URL}${endpoint}`,
+            url: `<span class="math-inline">\{API\_URL\}</span>{endpoint}`,
             // Headers Authorization akan ditambahkan oleh interceptor Axios
         };
 
@@ -233,16 +232,16 @@ async function loadSpareparts() {
             const card = document.createElement('div');
             card.className = 'sparepart-card';
             // Perhatikan: `part.image` adalah nama file, bukan URL lengkap
-            const imageUrl = part.image ? `${API_URL}/uploads/${part.image}` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+            const imageUrl = part.image ? `<span class="math-inline">\{API\_URL\}/uploads/</span>{part.image}` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
 
             card.innerHTML = `
-                <img src="${imageUrl}" alt="${part.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">
+                <img src="<span class="math-inline">\{imageUrl\}" alt\="</span>{part.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">
                 <h3>${part.name}</h3>
-                <p>Stok: ${part.stock}</p>
-                <p>Harga: Rp${Number(part.price).toLocaleString('id-ID')}</p>
+                <p>Stok: <span class="math-inline">\{part\.stock\}</p\>
+<p\>Harga\: Rp</span>{Number(part.price).toLocaleString('id-ID')}</p>
                 <div class="card-actions">
-                    <button onclick="editSparepart(${part.id})">Edit</button>
-                    <button onclick="deleteSparepart(${part.id})" style="background:#d32f2f;color:white;">Hapus</button>
+                    <button onclick="editSparepart(<span class="math-inline">\{part\.id\}\)"\>Edit</button\>
+<button onclick\="deleteSparepart\(</span>{part.id})" style="background:#d32f2f;color:white;">Hapus</button>
                 </div>
             `;
             container.appendChild(card);
@@ -351,17 +350,17 @@ async function deleteSparepart(id) {
 // Fungsi untuk merender satu kartu sparepart
 window.renderSparepartCard = function (sparepart) {
     // Perhatikan: `sparepart.image` adalah nama file, bukan URL lengkap
-    const imageUrl = sparepart.image ? `${API_URL}/uploads/${sparepart.image}` : 'https://placehold.co/120x80/cccccc/000000?text=No+Image';
+    const imageUrl = sparepart.image ? `<span class="math-inline">\{API\_URL\}/uploads/</span>{sparepart.image}` : 'https://placehold.co/120x80/cccccc/000000?text=No+Image';
 
     return `
         <div class="sparepart-card">
-            <img src="${imageUrl}" alt="${sparepart.name}" onerror="this.src='https://placehold.co/120x80/cccccc/000000?text=No+Image'">
+            <img src="<span class="math-inline">\{imageUrl\}" alt\="</span>{sparepart.name}" onerror="this.src='https://placehold.co/120x80/cccccc/000000?text=No+Image'">
             <h3>${sparepart.name}</h3>
-            <p>Stok: ${sparepart.stock}</p>
-            <p>Harga: Rp${Number(sparepart.price).toLocaleString('id-ID')}</p>
+            <p>Stok: <span class="math-inline">\{sparepart\.stock\}</p\>
+<p\>Harga\: Rp</span>{Number(sparepart.price).toLocaleString('id-ID')}</p>
             <div class="card-actions">
-                <input type="number" min="1" max="${sparepart.stock}" value="1" id="qty-${sparepart.id}" style="width:60px;">
-                <button onclick="addToCart(${sparepart.id}, document.getElementById('qty-${sparepart.id}').value)">Beli</button>
+                <input type="number" min="1" max="<span class="math-inline">\{sparepart\.stock\}" value\="1" id\="qty\-</span>{sparepart.id}" style="width:60px;">
+                <button onclick="addToCart(<span class="math-inline">\{sparepart\.id\}, document\.getElementById\('qty\-</span>{sparepart.id}').value)">Beli</button>
             </div>
         </div>
     `;
@@ -372,7 +371,6 @@ window.loadAvailableSpareparts = async function () {
     const container = document.getElementById('availableSpareparts');
     container.innerHTML = 'Loading...';
     try {
-        // Menggunakan apiCall untuk mendapatkan sparepart (dengan otorisasi)
         const response = await apiCall('get', '/spareparts');
         const spareparts = response.data; // Asumsi response.data adalah array spareparts
         const availableSpareparts = spareparts.filter(part => part.stock > 0);
@@ -592,22 +590,40 @@ window.payOrder = async function (id) {
         alert('Pembayaran berhasil diproses.');
         loadMyOrders(); // Perbarui riwayat pesanan
     } catch (error) {
-        console.error("Payment error:", error);
+        console.error("Error paying order:", error);
         alert(`Gagal memproses pembayaran: ${error.response?.data?.message || error.message}`);
     }
 };
 
 // Fungsi untuk membatalkan pesanan
 window.cancelOrder = async function (id) {
-    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini? Stok akan dikembalikan.')) return;
+    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) return;
     try {
         // Menggunakan apiCall untuk membatalkan pesanan (dengan otorisasi)
         await apiCall('put', `/orders/${id}/cancel`);
-        alert('Pesanan berhasil dibatalkan dan stok dikembalikan.');
+        alert('Pesanan berhasil dibatalkan.');
         loadMyOrders(); // Perbarui riwayat pesanan
-        loadAvailableSpareparts(); // Perbarui stok di daftar sparepart
     } catch (error) {
-        console.error("Cancel order error:", error);
+        console.error("Error cancelling order:", error);
         alert(`Gagal membatalkan pesanan: ${error.response?.data?.message || error.message}`);
     }
 };
+
+// --- INISIALISASI ---
+// Cek apakah ada user di localStorage saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id;
+        currentUserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
+        accessToken = ''; // Jika token disimpan terpisah, ambil dari sana
+        if (currentUserRole === 'admin') {
+            showAdminDashboard();
+        } else {
+            showCustomerDashboard();
+        }
+    } else {
+        showLogin();
+    }
+});
