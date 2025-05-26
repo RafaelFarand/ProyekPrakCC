@@ -27,7 +27,7 @@ if (!fs.existsSync(uploadsDir)) {
 // CORS Configuration - DIPERBAIKI
 const corsOptions = {
     origin: [
-        'https://fe-040-dot-f-01-450707.uc.r.appspot.com',
+        'https://fe-040-dot-b-01-450713.uc.r.appspot.com',
         'http://localhost:3000', // untuk development
         'http://localhost:5173', // untuk Vite
         'http://127.0.0.1:5500',  // untuk Live Server
