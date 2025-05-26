@@ -1,4 +1,6 @@
+axios.defaults.withCredentials = true; // Tambahkan ini di awal file
 const API_URL = "https://notes-1061342868557.us-central1.run.app"; // Ganti dengan URL backend And
+//const API_URL = "http://localhost:5000"
 let accessToken = "";
 let currentUserId = null;
 let currentUserRole = "customer"; // Default: customer
@@ -51,25 +53,30 @@ function showAddForm() {
 
 // --- AUTENTIKASI ---
 async function register() {
-    const email = document.getElementById('regEmail').value;
-    const username = document.getElementById('regUsername').value;
-    const password = document.getElementById('regPassword').value;
-
-    if (!email || !username || !password) {
-        alert('Semua field harus diisi!');
-        return;
-    }
-
     try {
+        const email = document.getElementById('regEmail').value;
+        const username = document.getElementById('regUsername').value;
+        const password = document.getElementById('regPassword').value;
+
+        // Validasi input
+        if (!email || !username || !password) {
+            alert('Semua field harus diisi!');
+            return;
+        }
+
         const response = await axios.post(`${API_URL}/register`, {
             email,
             username,
             password
         });
-        alert('Registrasi berhasil! Silakan login.');
-        showLogin();
+
+        if (response.status === 201) {
+            alert('Registrasi berhasil! Silakan login.');
+            showLogin();
+        }
     } catch (error) {
-        alert(`Registrasi gagal: ${error.response?.data?.message || error.message}`);
+        console.error('Error registrasi:', error);
+        alert(`Gagal registrasi: ${error.response?.data?.message || 'Terjadi kesalahan'}`);
     }
 }
 
@@ -86,6 +93,8 @@ async function login() {
         const response = await axios.post(`${API_URL}/login`, {
             email,
             password
+        }, {
+            withCredentials: true  // **Tambah ini**
         });
         
         accessToken = response.data.accessToken;
@@ -106,7 +115,9 @@ async function login() {
 
 async function logout() {
     try {
-        await axios.get(`${API_URL}/logout`);
+        await axios.get(`${API_URL}/logout`, {
+            withCredentials: true  // **Tambah ini**
+        });
         accessToken = '';
         currentUserId = null;
         showLogin();
@@ -122,7 +133,9 @@ async function logout() {
 // --- TOKEN REFRESH ---
 async function refreshToken() {
     try {
-        const response = await axios.get(`${API_URL}/token`);
+        const response = await axios.get(`${API_URL}/token`, {
+            withCredentials: true  // **Tambah ini supaya cookie refreshToken terkirim**
+        });
         accessToken = response.data.accessToken;
         return true;
     } catch (error) {
@@ -142,7 +155,8 @@ async function apiCall(method, endpoint, data = null, formData = false) {
             url: `${API_URL}${endpoint}`,
             headers: { 
                 'Authorization': `Bearer ${accessToken}`
-            }
+            },
+            withCredentials: true  // **Tambah ini supaya cookie juga ikut di request API selain login/token**
         };
 
         if (data) {
@@ -165,7 +179,8 @@ async function apiCall(method, endpoint, data = null, formData = false) {
                     url: `${API_URL}${endpoint}`,
                     headers: { 
                         'Authorization': `Bearer ${accessToken}`
-                    }
+                    },
+                    withCredentials: true  // **Tambah ini**
                 };
 
                 if (data) {
@@ -444,6 +459,7 @@ window.onload = function() {
             showLogin();
         });
 };
+
 
 // --- Export fungsi untuk digunakan di HTML inline ---
 window.showLogin = showLogin;

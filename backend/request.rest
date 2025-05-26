@@ -2,13 +2,13 @@ get http://localhost:5000/notes
 
 ###
 
-POST  http://localhost:5000/tambahdata
+POST https://notes-1061342868557.us-central1.run.app/register
 Content-Type: application/json
 
 {
-    "nama":"messi goat",
-    "judul":"goal",
-    "catatan":"ankara messi ankara messi ankara messi, gol gol gol gol"
+    "email":"admin@gmail.com",
+    "username":"admin",
+    "password":"123456"
     
 }
 

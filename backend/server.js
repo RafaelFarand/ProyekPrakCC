@@ -22,15 +22,11 @@ const PORT = process.env.PORT || 5000;
 
 // CORS Configuration
 const corsOptions = {
-    origin: [
-        'http://127.0.0.1:5500',
-        'https://fe-040-dot-b-01-450713.uc.r.appspot.com'
-    ],
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500'], // tambahkan domain frontend
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Set-Cookie'],
-    optionsSuccessStatus: 200
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie']
 };
 
 // Middleware
