@@ -34,8 +34,8 @@ const corsOptions = {
         'http://127.0.0.1:5500',
         'http://localhost:8080',
         'https://localhost:3000',
-        'https://fe-040-dot-b-01-450713.uc.r.appspot.com', // Tambahkan domain frontend Anda
-        'https://fe-040-dot-f-01-450707.uc.r.appspot.com', // Tambahkan domain frontend lainnya jika ada
+        'https://fe-040-dot-b-01-450713.uc.r.appspot.com', // Domain frontend
+        'https://fe-040-dot-f-01-450707.uc.r.appspot.com', // Domain frontend lainnya
         'null' // Untuk file:// protocol saat testing lokal
     ],
     credentials: true,
@@ -51,7 +51,7 @@ const corsOptions = {
         'Access-Control-Allow-Methods'
     ],
     exposedHeaders: ['Set-Cookie'],
-    optionsSuccessStatus: 200 // Untuk support legacy browsers
+    optionsSuccessStatus: 200
 };
 
 // Middleware CORS - dipasang paling awal
