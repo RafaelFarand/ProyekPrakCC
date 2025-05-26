@@ -1,97 +1,46 @@
-const API_URL = "https://notes-1061342868557.us-central1.run.app"; // Ganti dengan URL backend Anda
+const API_URL = "https://notes-1061342868557.us-central1.run.app"; // Ganti dengan URL backend And
 let accessToken = "";
 let currentUserId = null;
-let currentUserRole = "customer";
+let currentUserRole = "customer"; // Default: customer
 let editingSparepartId = null;
 
 // Mengatur Axios untuk mengirim cookies
 axios.defaults.withCredentials = true;
 
-// Setup axios interceptors untuk otomatis handle token refresh
-axios.interceptors.request.use(
-    (config) => {
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-axios.interceptors.response.use(
-    (response) => {
-        return response;
-    },
-    async (error) => {
-        const originalRequest = error.config;
-        // Cek jika error 403 (Forbidden) dan belum mencoba refresh
-        if (error.response?.status === 403 && !originalRequest._retry) {
-            originalRequest._retry = true;
-            try {
-                const refreshResponse = await axios.get(`${API_URL}/token`);
-                accessToken = refreshResponse.data.accessToken;
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-                return axios(originalRequest); // Coba lagi request asli dengan token baru
-            } catch (refreshError) {
-                console.error("Token refresh failed:", refreshError);
-                accessToken = "";
-                currentUserId = null;
-                showLogin(); // Arahkan ke login jika refresh gagal
-                return Promise.reject(refreshError);
-            }
-        }
-        return Promise.reject(error);
-    }
-);
-
-
 // --- NAVIGASI ---
 function showLogin() {
     document.getElementById('loginSection').classList.remove('hidden');
     document.getElementById('registerSection').classList.add('hidden');
-    // Pastikan ID elemen sesuai dengan index.html Anda
-    document.getElementById('adminDashboardPage').style.display = "none";
-    document.getElementById('customerDashboardPage').style.display = "none";
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
 }
 
 function showRegister() {
     document.getElementById('loginSection').classList.add('hidden');
     document.getElementById('registerSection').classList.remove('hidden');
-    document.getElementById('adminDashboardPage').style.display = "none";
-    document.getElementById('customerDashboardPage').style.display = "none";
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
 }
 
-// showAdminDashboard dan showCustomerDashboard akan dipanggil setelah login berhasil
-// dan juga dipanggil di <script> di index.html
 function showAdminDashboard() {
-    // Logika localStorage ini ditambahkan dari saran sebelumnya
-    const userData = localStorage.getItem('user');
-    if (userData) {
-        document.getElementById("mainPage").style.display = "none";
-        document.getElementById("registerPage").style.display = "none";
-        document.getElementById("adminDashboardPage").style.display = "block";
-        document.getElementById("customerDashboardPage").style.display = "none";
-        loadSpareparts(); // Muat ulang daftar sparepart admin
-    } else {
-        alert('Sesi tidak valid. Silakan login kembali.');
-        showLogin();
-    }
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('registerSection').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.remove('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
+    loadSpareparts();
 }
 
 function showCustomerDashboard() {
-    document.getElementById("mainPage").style.display = "none";
-    document.getElementById("registerPage").style.display = "none";
-    document.getElementById("adminDashboardPage").style.display = "none";
-    document.getElementById("customerDashboardPage").style.display = "block";
-    // Memastikan fungsi-fungsi ini ada sebelum memanggilnya
-    if (window.loadAvailableSpareparts) window.loadAvailableSpareparts();
-    if (window.loadCart) window.loadCart();
-    if (window.loadMyOrders) window.loadMyOrders();
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('registerSection').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.remove('hidden');
+    loadAvailableSpareparts();
+    loadMyOrders();
 }
 
 function showAddForm() {
+    // Reset form untuk penambahan baru
     document.getElementById('sparepartForm').classList.remove('hidden');
     document.getElementById('sparepartName').value = '';
     document.getElementById('sparepartStock').value = '';
@@ -120,7 +69,6 @@ async function register() {
         alert('Registrasi berhasil! Silakan login.');
         showLogin();
     } catch (error) {
-        console.error('Register error:', error);
         alert(`Registrasi gagal: ${error.response?.data?.message || error.message}`);
     }
 }
@@ -139,22 +87,19 @@ async function login() {
             email,
             password
         });
-
+        
         accessToken = response.data.accessToken;
         currentUserId = response.data.safeUserData.id;
+        
+        // Untuk demo, pengguna dianggap admin jika username mengandung "admin"
         currentUserRole = response.data.safeUserData.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
-
-        // Simpan data user ke localStorage (dari saran sebelumnya)
-        localStorage.setItem('user', JSON.stringify(response.data.safeUserData));
-
-
+        
         if (currentUserRole === 'admin') {
             showAdminDashboard();
         } else {
             showCustomerDashboard();
         }
     } catch (error) {
-        console.error('Login error:', error);
         alert(`Login gagal: ${error.response?.data?.message || error.message}`);
     }
 }
@@ -162,18 +107,19 @@ async function login() {
 async function logout() {
     try {
         await axios.get(`${API_URL}/logout`);
-    } catch (error) {
-        console.error("Logout error:", error);
-    } finally {
         accessToken = '';
         currentUserId = null;
-        localStorage.removeItem('user'); // Hapus data user dari localStorage
+        showLogin();
+    } catch (error) {
+        console.error("Logout error:", error);
+        // Tetap logout meskipun gagal
+        accessToken = '';
+        currentUserId = null;
         showLogin();
     }
 }
 
 // --- TOKEN REFRESH ---
-// Fungsi ini mungkin tidak perlu dipanggil secara eksplisit jika interceptor sudah menangani
 async function refreshToken() {
     try {
         const response = await axios.get(`${API_URL}/token`);
@@ -183,66 +129,85 @@ async function refreshToken() {
         console.error("Token refresh failed:", error);
         accessToken = '';
         currentUserId = null;
+        showLogin();
         return false;
     }
 }
 
 // --- API HELPER ---
-// Fungsi apiCall ini tetap dipertahankan untuk konsistensi dan penanganan FormData
-// Meskipun interceptor sudah menangani otorisasi, apiCall bisa jadi wrapper yang rapi
-async function apiCall(method, endpoint, data = null, isFormData = false) {
+async function apiCall(method, endpoint, data = null, formData = false) {
     try {
         const config = {
             method,
-            url: `<span class="math-inline">\{API\_URL\}</span>{endpoint}`,
-            // Headers Authorization akan ditambahkan oleh interceptor Axios
+            url: `${API_URL}${endpoint}`,
+            headers: { 
+                'Authorization': `Bearer ${accessToken}`
+            }
         };
 
         if (data) {
-            config.data = data;
-            if (!isFormData) {
-                config.headers = { ...config.headers, 'Content-Type': 'application/json' };
+            if (formData) {
+                config.data = data;
+                config.headers['Content-Type'] = 'multipart/form-data';
+            } else {
+                config.data = data;
             }
-            // Untuk FormData, biarkan browser set Content-Type otomatis
         }
 
         return await axios(config);
     } catch (error) {
-        // Interceptor Axios sudah mencoba refresh token. Jika masih error,
-        // berarti ada masalah lain atau refresh token gagal.
-        console.error(`API Call Error (${method} ${endpoint}):`, error);
-        throw error; // Lempar error agar bisa ditangkap di fungsi pemanggil
+        if (error.response && error.response.status === 403) {
+            const refreshed = await refreshToken();
+            if (refreshed) {
+                // Retry with new token
+                const config = {
+                    method,
+                    url: `${API_URL}${endpoint}`,
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                };
+
+                if (data) {
+                    if (formData) {
+                        config.data = data;
+                        config.headers['Content-Type'] = 'multipart/form-data';
+                    } else {
+                        config.data = data;
+                    }
+                }
+
+                return await axios(config);
+            }
+        }
+        throw error;
     }
 }
 
-// --- SPAREPART MANAGEMENT (ADMIN) ---
+// --- SPAREPART MANAGEMENT ---
 async function loadSpareparts() {
     try {
         const response = await apiCall('get', '/spareparts');
-        const spareparts = response.data; // Asumsi response.data adalah array sparepart
+        const spareparts = response.data;
         const container = document.getElementById('sparepartsList');
         container.innerHTML = '';
 
-        if (spareparts.length === 0) {
-            container.innerHTML = '<p>Belum ada sparepart.</p>';
-            return;
-        }
-
         spareparts.forEach(part => {
             const card = document.createElement('div');
-            card.className = 'sparepart-card';
-            // Perhatikan: `part.image` adalah nama file, bukan URL lengkap
-            const imageUrl = part.image ? `<span class="math-inline">\{API\_URL\}/uploads/</span>{part.image}` : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-
+            card.className = 'card';
+            
+            let imageHtml = '';
+            if (part.image) {
+                imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
+            }
+            
             card.innerHTML = `
-                <img src="<span class="math-inline">\{imageUrl\}" alt\="</span>{part.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">
+                ${imageHtml}
                 <h3>${part.name}</h3>
-                <p>Stok: <span class="math-inline">\{part\.stock\}</p\>
-<p\>Harga\: Rp</span>{Number(part.price).toLocaleString('id-ID')}</p>
-                <div class="card-actions">
-                    <button onclick="editSparepart(<span class="math-inline">\{part\.id\}\)"\>Edit</button\>
-<button onclick\="deleteSparepart\(</span>{part.id})" style="background:#d32f2f;color:white;">Hapus</button>
-                </div>
+                <p>Stok: ${part.stock}</p>
+                <p>Harga: Rp${part.price}</p>
+                <button onclick="editSparepart(${part.id})">Edit</button>
+                <button onclick="deleteSparepart(${part.id})">Hapus</button>
             `;
             container.appendChild(card);
         });
@@ -252,22 +217,58 @@ async function loadSpareparts() {
     }
 }
 
+async function loadAvailableSpareparts() {
+    try {
+        const response = await apiCall('get', '/spareparts');
+        const spareparts = response.data;
+        const container = document.getElementById('availableSpareparts');
+        container.innerHTML = '';
+
+        spareparts.forEach(part => {
+            if (part.stock > 0) { // Hanya tampilkan yang ada stoknya
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                let imageHtml = '';
+                if (part.image) {
+                    imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
+                }
+                
+                card.innerHTML = `
+                    ${imageHtml}
+                    <h3>${part.name}</h3>
+                    <p>Stok: ${part.stock}</p>
+                    <p>Harga: Rp${part.price}</p>
+                    <input type="number" id="qty-${part.id}" min="1" max="${part.stock}" value="1">
+                    <button onclick="buySparepart(${part.id})">Beli</button>
+                `;
+                container.appendChild(card);
+            }
+        });
+    } catch (error) {
+        console.error("Error loading available spareparts:", error);
+        alert("Gagal memuat data sparepart");
+    }
+}
+
 async function editSparepart(id) {
     try {
-        // Ambil data sparepart spesifik untuk diedit
-        const response = await apiCall('get', `/spareparts/${id}`); // Asumsi ada endpoint GET /spareparts/:id
-        const sparepart = response.data; // Asumsi response.data adalah objek sparepart tunggal
-
+        // Ambil data sparepart yang akan diedit
+        const response = await apiCall('get', '/spareparts');
+        const sparepart = response.data.find(part => part.id === id);
+        
         if (!sparepart) {
             alert('Sparepart tidak ditemukan!');
             return;
         }
-
+        
+        // Set form untuk editing
         document.getElementById('sparepartName').value = sparepart.name;
         document.getElementById('sparepartStock').value = sparepart.stock;
         document.getElementById('sparepartPrice').value = sparepart.price;
         document.getElementById('sparepartForm').classList.remove('hidden');
-
+        
+        // Simpan ID untuk nanti
         editingSparepartId = id;
     } catch (error) {
         console.error("Error fetching sparepart for edit:", error);
@@ -280,369 +281,179 @@ async function saveSparepart() {
     const stock = document.getElementById('sparepartStock').value;
     const price = document.getElementById('sparepartPrice').value;
     const imageInput = document.getElementById('sparepartImage');
-
+    
     if (!name || !stock || !price) {
-        alert('Nama, stok, dan harga harus diisi!');
+        alert('Semua field harus diisi kecuali gambar!');
         return;
     }
-
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('stock', stock);
-    formData.append('price', price);
-
-    // Tambahkan file jika ada
-    if (imageInput.files && imageInput.files.length > 0) {
-        formData.append('image', imageInput.files[0]);
-    } else if (!editingSparepartId) {
-        // Jika mode tambah baru dan tidak ada gambar
-        alert('Gambar wajib diupload untuk sparepart baru!');
-        return;
-    }
-
+    
     try {
-        let endpoint = '/spareparts';
-        let method = 'post';
-
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('stock', stock);
+        formData.append('price', price);
+        formData.append('supplierId', 1); // Default supplier ID
+        
+        if (imageInput.files[0]) {
+            formData.append('image', imageInput.files[0]);
+        }
+        
         if (editingSparepartId) {
-            endpoint = `/spareparts/${editingSparepartId}`;
-            method = 'put';
-            // Tidak perlu menambahkan ID ke formData karena sudah ada di URL
-        }
-
-        const response = await apiCall(method, endpoint, formData, true); // isFormData = true
-
-        if (response.data) { // Asumsi backend mengembalikan data atau pesan sukses
-            alert(`Sparepart berhasil di${editingSparepartId ? 'update' : 'simpan'}!`);
-            // Reset form
-            document.getElementById('sparepartForm').classList.add('hidden');
-            document.getElementById('sparepartName').value = '';
-            document.getElementById('sparepartStock').value = '';
-            document.getElementById('sparepartPrice').value = '';
-            document.getElementById('sparepartImage').value = '';
-            editingSparepartId = null;
-            loadSpareparts(); // Muat ulang daftar sparepart di admin dashboard
+            // Update existing sparepart
+            await apiCall('put', `/spareparts/${editingSparepartId}`, formData, true);
+            alert('Sparepart berhasil diperbarui!');
         } else {
-            alert('Gagal menyimpan/update sparepart.');
+            // Create new sparepart
+            await apiCall('post', '/spareparts', formData, true);
+            alert('Sparepart berhasil ditambahkan!');
         }
+        
+        // Reset form and reload
+        document.getElementById('sparepartForm').classList.add('hidden');
+        editingSparepartId = null;
+        loadSpareparts();
     } catch (error) {
-        console.error('Error saving/updating sparepart:', error);
-        alert(`Terjadi kesalahan saat menyimpan/update sparepart: ${error.response?.data?.message || error.message}`);
+        console.error("Error saving sparepart:", error);
+        alert(`Gagal menyimpan data: ${error.response?.data?.message || error.message}`);
     }
 }
 
 async function deleteSparepart(id) {
-    if (!confirm('Apakah Anda yakin ingin menghapus sparepart ini? Semua data pembelian terkait juga akan dihapus.')) {
+    if (!confirm('Apakah Anda yakin ingin menghapus sparepart ini?')) {
         return;
     }
-
+    
     try {
         await apiCall('delete', `/spareparts/${id}`);
         alert('Sparepart berhasil dihapus!');
-        loadSpareparts(); // Muat ulang daftar sparepart di admin dashboard
+        loadSpareparts();
     } catch (error) {
         console.error("Error deleting sparepart:", error);
         alert(`Gagal menghapus data: ${error.response?.data?.message || error.message}`);
     }
 }
 
-// --- SPAREPART MANAGEMENT (CUSTOMER) ---
-// Fungsi untuk merender satu kartu sparepart
-window.renderSparepartCard = function (sparepart) {
-    // Perhatikan: `sparepart.image` adalah nama file, bukan URL lengkap
-    const imageUrl = sparepart.image ? `<span class="math-inline">\{API\_URL\}/uploads/</span>{sparepart.image}` : 'https://placehold.co/120x80/cccccc/000000?text=No+Image';
-
-    return `
-        <div class="sparepart-card">
-            <img src="<span class="math-inline">\{imageUrl\}" alt\="</span>{sparepart.name}" onerror="this.src='https://placehold.co/120x80/cccccc/000000?text=No+Image'">
-            <h3>${sparepart.name}</h3>
-            <p>Stok: <span class="math-inline">\{sparepart\.stock\}</p\>
-<p\>Harga\: Rp</span>{Number(sparepart.price).toLocaleString('id-ID')}</p>
-            <div class="card-actions">
-                <input type="number" min="1" max="<span class="math-inline">\{sparepart\.stock\}" value\="1" id\="qty\-</span>{sparepart.id}" style="width:60px;">
-                <button onclick="addToCart(<span class="math-inline">\{sparepart\.id\}, document\.getElementById\('qty\-</span>{sparepart.id}').value)">Beli</button>
-            </div>
-        </div>
-    `;
-};
-
-// Fungsi untuk memuat dan menampilkan sparepart yang tersedia untuk customer
-window.loadAvailableSpareparts = async function () {
-    const container = document.getElementById('availableSpareparts');
-    container.innerHTML = 'Loading...';
-    try {
-        const response = await apiCall('get', '/spareparts');
-        const spareparts = response.data; // Asumsi response.data adalah array spareparts
-        const availableSpareparts = spareparts.filter(part => part.stock > 0);
-
-        if (availableSpareparts.length === 0) {
-            container.innerHTML = '<p>Tidak ada sparepart yang tersedia saat ini.</p>';
-            return;
-        }
-
-        // Render setiap sparepart menggunakan renderSparepartCard
-        container.innerHTML = availableSpareparts.map(part => window.renderSparepartCard(part)).join('');
-    } catch (error) {
-        console.error("Error loading available spareparts:", error);
-        container.innerHTML = 'Gagal memuat sparepart.';
-        alert("Gagal memuat data sparepart");
-    }
-};
-
-// --- CART MANAGEMENT (CUSTOMER) ---
-let editingCartId = null; // Variabel global untuk menyimpan ID cart yang sedang diedit
-
-// Fungsi untuk memuat dan menampilkan item di keranjang
-window.loadCart = async function () {
-    const cartTbody = document.getElementById('cartTbody');
-    cartTbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
-    try {
-        // Menggunakan apiCall untuk mendapatkan item keranjang (dengan otorisasi)
-        // Perhatikan endpoint: /cart/:id_user
-        const res = await apiCall('get', `/cart/${currentUserId}`);
-        const cart = res.data.data || []; // Asumsi data keranjang ada di res.data.data
-
-        if (cart.length === 0) {
-            cartTbody.innerHTML = `<tr><td colspan="5">Keranjang kosong</td></tr>`;
-            document.getElementById('checkoutBtn').disabled = true;
-            return;
-        }
-        document.getElementById('checkoutBtn').disabled = false;
-        cartTbody.innerHTML = '';
-
-        cart.forEach(item => {
-            const disabled = item.status !== 'cart'; // Tombol edit/hapus hanya aktif jika status 'cart'
-            cartTbody.innerHTML += `
-                <tr>
-                    <td>${item.sparepart?.name || 'N/A'}</td>
-                    <td>${item.jumlah}</td>
-                    <td>Rp${Number(item.sparepart?.price || 0).toLocaleString('id-ID')}</td>
-                    <td>Rp${Number(item.total_harga || 0).toLocaleString('id-ID')}</td>
-                    <td>
-                        ${disabled ? '-' : `
-                            <button onclick="showEditCartModal(${item.id}, ${item.jumlah})">Edit</button>
-                            <button onclick="deleteCartItem(${item.id})" style="background:#d32f2f;color:#fff;">Hapus</button>
-                        `}
-                    </td>
-                </tr>
-            `;
-        });
-    } catch (e) {
-        console.error("Error loading cart:", e);
-        cartTbody.innerHTML = `<tr><td colspan="5">Gagal memuat keranjang</td></tr>`;
-        alert("Gagal memuat keranjang");
-    }
-};
-
-// Fungsi untuk menambah item ke keranjang dari daftar sparepart
-window.addToCart = async function (id_sparepart, jumlah) {
-    if (!currentUserId) {
-        alert('Anda harus login untuk menambahkan item ke keranjang!');
-        showLogin();
+// --- PEMBELIAN MANAGEMENT ---
+async function buySparepart(sparepartId) {
+    const qtyInput = document.getElementById(`qty-${sparepartId}`);
+    const jumlah = parseInt(qtyInput.value, 10);
+    
+    if (!jumlah || jumlah < 1) {
+        alert('Jumlah pembelian harus minimal 1!');
         return;
     }
-    const parsedJumlah = parseInt(jumlah, 10);
-    if (isNaN(parsedJumlah) || parsedJumlah < 1) {
-        alert('Jumlah harus angka positif!');
-        return;
-    }
-
+    
     try {
-        // Menggunakan apiCall untuk menambah item ke keranjang (dengan otorisasi)
-        const cartItem = {
+        const orderData = {
             id_user: currentUserId,
-            id_sparepart: id_sparepart,
-            jumlah: parsedJumlah
+            id_sparepart: sparepartId,
+            jumlah: jumlah
         };
-        await apiCall('post', '/cart', cartItem);
-        alert('Item ditambahkan ke keranjang.');
-        loadCart(); // Perbarui tampilan keranjang
-        loadAvailableSpareparts(); // Perbarui stok di daftar sparepart
+        
+        await apiCall('post', '/pembelian', orderData);
+        alert('Pembelian berhasil!');
+        loadMyOrders();
+        loadAvailableSpareparts(); // Reload untuk mendapatkan stok terbaru
     } catch (error) {
-        console.error("Error adding to cart:", error);
-        alert(`Gagal menambahkan ke keranjang: ${error.response?.data?.message || error.message}`);
+        console.error("Error creating order:", error);
+        alert(`Gagal melakukan pembelian: ${error.response?.data?.message || error.message}`);
     }
-};
+}
 
-// Menampilkan modal edit keranjang
-window.showEditCartModal = function (id, jumlah) {
-    editingCartId = id;
-    document.getElementById('editJumlahInput').value = jumlah;
-    document.getElementById('editCartModal').style.display = 'block';
-};
-
-// Menutup modal edit keranjang
-window.closeEditCartModal = function () {
-    document.getElementById('editCartModal').style.display = 'none';
-    editingCartId = null;
-};
-
-// Event listener untuk tombol simpan di modal edit keranjang
-document.getElementById('saveEditCartBtn').onclick = async function () {
-    const jumlah = parseInt(document.getElementById('editJumlahInput').value, 10);
-    if (isNaN(jumlah) || jumlah < 1) {
-        alert('Jumlah minimal 1!');
-        return;
-    }
+async function loadMyOrders() {
     try {
-        // Menggunakan apiCall untuk memperbarui jumlah item di keranjang (dengan otorisasi)
-        await apiCall('put', `/cart/${editingCartId}`, { jumlah });
-        alert('Jumlah diperbarui.');
-        closeEditCartModal();
-        loadCart(); // Perbarui tampilan keranjang
-        loadAvailableSpareparts(); // Perbarui stok di daftar sparepart
-    } catch (error) {
-        console.error("Update cart error:", error);
-        alert(`Gagal update jumlah: ${error.response?.data?.message || error.message}`);
-    }
-};
-
-// Menghapus item dari keranjang
-window.deleteCartItem = async function (id) {
-    if (!confirm('Hapus item ini dari keranjang?')) return;
-    try {
-        // Menggunakan apiCall untuk menghapus item dari keranjang (dengan otorisasi)
-        await apiCall('delete', `/cart/${id}`);
-        alert('Item dihapus dari keranjang.');
-        loadCart(); // Perbarui tampilan keranjang
-        loadAvailableSpareparts(); // Perbarui stok di daftar sparepart
-    } catch (error) {
-        console.error("Remove cart error:", error);
-        alert(`Gagal menghapus item: ${error.response?.data?.message || error.message}`);
-    }
-};
-
-// Checkout semua item di keranjang
-document.getElementById('checkoutBtn').onclick = async function () {
-    if (!confirm('Checkout semua item di keranjang?')) return;
-    if (!currentUserId) {
-        alert('Anda harus login untuk melakukan checkout!');
-        showLogin();
-        return;
-    }
-    try {
-        // Menggunakan apiCall untuk checkout (dengan otorisasi)
-        await apiCall('post', '/cart/checkout', { id_user: currentUserId });
-        alert('Checkout berhasil! Silakan lakukan pembayaran.');
-        loadCart(); // Perbarui tampilan keranjang (seharusnya kosong atau berubah status)
-        if (window.loadMyOrders) window.loadMyOrders(); // Perbarui riwayat pesanan
-    } catch (error) {
-        console.error("Checkout error:", error);
-        alert(`Checkout gagal: ${error.response?.data?.message || error.message}`);
-    }
-};
-
-// --- ORDER MANAGEMENT (CUSTOMER) ---
-// Fungsi untuk memuat dan menampilkan riwayat pesanan customer
-window.loadMyOrders = async function () {
-    const container = document.getElementById('myOrders');
-    container.innerHTML = 'Loading...';
-    if (!currentUserId) {
-        container.innerHTML = '<p>Silakan login untuk melihat pesanan Anda.</p>';
-        return;
-    }
-    try {
-        // Menggunakan apiCall untuk mendapatkan riwayat pesanan (dengan otorisasi)
-        // Perhatikan endpoint: /orders/:id_user
-        const response = await apiCall('get', `/orders/${currentUserId}`);
-        const orders = response.data.data || []; // Asumsi data pesanan ada di response.data.data
-
+        const response = await apiCall('get', `/pembelian/${currentUserId}`);
+        const orders = response.data;
+        const container = document.getElementById('myOrders');
+        container.innerHTML = '';
+        
         if (orders.length === 0) {
             container.innerHTML = '<p>Belum ada pesanan.</p>';
             return;
         }
-
-        container.innerHTML = '';
-        orders.forEach(order => {
-            const item = document.createElement('div');
-            item.className = 'sparepart-card'; // Bisa disesuaikan stylingnya agar berbeda dari sparepart biasa
-
-            // Perhatikan: `order.sparepart.image` adalah nama file, bukan URL lengkap
-            const imageUrl = order.sparepart?.image ? `${API_URL}/uploads/${order.sparepart.image}` : 'https://placehold.co/150x100/cccccc/000000?text=No+Image';
-
-            item.innerHTML = `
-                <img src="${imageUrl}" alt="${order.sparepart?.name || 'N/A'}" onerror="this.src='https://placehold.co/150x100/cccccc/000000?text=No+Image'">
-                <h3>${order.sparepart?.name || 'N/A'}</h3>
-                <p>Status: ${order.status}</p>
-                <p>Jumlah: ${order.jumlah}</p>
-                <p>Total Harga: Rp${Number(order.total_harga || 0).toLocaleString('id-ID')}</p>
-                <p>Tanggal Order: ${new Date(order.tanggal_order).toLocaleDateString('id-ID')}</p>
-                ${order.status === 'ordered' ? `
-                    <button onclick="payOrder(${order.id})" style="background:#2366b3;color:white;">Bayar</button>
-                    <button onclick="cancelOrder(${order.id})" style="background:#d32f2f;color:white;">Batalkan</button>
-                ` : ''}
+        
+        const orderTable = document.createElement('table');
+        orderTable.style.width = '100%';
+        orderTable.style.borderCollapse = 'collapse';
+        orderTable.innerHTML = `
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Sparepart</th>
+                    <th>Jumlah</th>
+                    <th>Harga Satuan</th>
+                    <th>Total</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody"></tbody>
+        `;
+        
+        container.appendChild(orderTable);
+        const tableBody = document.getElementById('orderTableBody');
+        
+        orders.forEach((order, index) => {
+            const total = order.jumlah * order.sparepart.price;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${order.sparepart.name}</td>
+                <td>${order.jumlah}</td>
+                <td>Rp${order.sparepart.price}</td>
+                <td>Rp${total}</td>
+                <td>
+                    <button onclick="cancelOrder(${order.id})">Batalkan</button>
+                </td>
             `;
-            container.appendChild(item);
+            tableBody.appendChild(row);
         });
     } catch (error) {
         console.error("Error loading orders:", error);
-        container.innerHTML = '<p>Gagal memuat pesanan.</p>';
-        alert("Gagal memuat pesanan");
+        document.getElementById('myOrders').innerHTML = '<p>Gagal memuat data pesanan.</p>';
     }
-};
+}
 
-// Fungsi untuk memproses pembayaran pesanan
-window.payOrder = async function (id) {
-    if (!confirm('Apakah Anda yakin ingin memproses pembayaran pesanan ini?')) return;
-    try {
-        // Menggunakan apiCall untuk memproses pembayaran (dengan otorisasi)
-        await apiCall('put', `/orders/${id}/pay`);
-        alert('Pembayaran berhasil diproses.');
-        loadMyOrders(); // Perbarui riwayat pesanan
-    } catch (error) {
-        console.error("Error paying order:", error);
-        alert(`Gagal memproses pembayaran: ${error.response?.data?.message || error.message}`);
+async function cancelOrder(orderId) {
+    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
+        return;
     }
-};
-
-// Fungsi untuk membatalkan pesanan
-window.cancelOrder = async function (id) {
-    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) return;
+    
     try {
-        // Menggunakan apiCall untuk membatalkan pesanan (dengan otorisasi)
-        await apiCall('put', `/orders/${id}/cancel`);
-        alert('Pesanan berhasil dibatalkan.');
-        loadMyOrders(); // Perbarui riwayat pesanan
+        await apiCall('delete', `/pembelian/${orderId}`);
+        alert('Pesanan berhasil dibatalkan!');
+        loadMyOrders();
+        loadAvailableSpareparts(); // Reload untuk mendapatkan stok terbaru
     } catch (error) {
-        console.error("Error cancelling order:", error);
+        console.error("Error canceling order:", error);
         alert(`Gagal membatalkan pesanan: ${error.response?.data?.message || error.message}`);
     }
+}
+
+// --- INISIALISASI ---
+window.onload = function() {
+    // Check jika user sudah login
+    refreshToken()
+        .then(success => {
+            if (success) {
+                // Akan menghandle redirect di refreshToken()
+            } else {
+                showLogin();
+            }
+        })
+        .catch(() => {
+            showLogin();
+        });
 };
 
-// --- INISIALISASI ---
-// Cek apakah ada user di localStorage saat halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        const user = JSON.parse(storedUser);
-        currentUserId = user.id;
-        currentUserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
-        accessToken = ''; // Jika token disimpan terpisah, ambil dari sana
-        if (currentUserRole === 'admin') {
-            showAdminDashboard();
-        } else {
-            showCustomerDashboard();
-        }
-    } else {
-        showLogin();
-    }
-});
-
-// --- INISIALISASI ---
-// Cek apakah ada user di localStorage saat halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-        const user = JSON.parse(storedUser);
-        currentUserId = user.id;
-        currentUserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
-        accessToken = ''; // Jika token disimpan terpisah, ambil dari sana
-        if (currentUserRole === 'admin') {
-            showAdminDashboard();
-        } else {
-            showCustomerDashboard();
-        }
-    } else {
-        showLogin();
-    }
-});
+// --- Export fungsi untuk digunakan di HTML inline ---
+window.showLogin = showLogin;
+window.showRegister = showRegister;
+window.register = register;
+window.login = login;
+window.logout = logout;
+window.showAddForm = showAddForm;
+window.saveSparepart = saveSparepart;
+window.editSparepart = editSparepart;
+window.deleteSparepart = deleteSparepart;
+window.buySparepart = buySparepart;
+window.cancelOrder = cancelOrder;

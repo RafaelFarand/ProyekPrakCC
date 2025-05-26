@@ -3,23 +3,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const db = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USERNAME,
-  process.env.DB_PASSWORD,
-  {
+const db = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
     host: process.env.DB_HOST,
     dialect: "mysql",
-  }
-);
-
-(async () => {
-  try {
-    await db.authenticate();
-    console.log("Database berhasil terkoneksi.");
-  } catch (error) {
-    console.error("Database gagal terkoneksi:", error);
-  }
-})();
+    logging: false, // Nonaktifkan log query jika tidak diperlukan
+});
 
 export default db;
