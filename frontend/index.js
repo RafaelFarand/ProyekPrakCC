@@ -1,4 +1,3 @@
-axios.defaults.withCredentials = true; // Tambahkan ini di awal file
 const API_URL = "https://notes-1061342868557.us-central1.run.app"; // Ganti dengan URL backend And
 //const API_URL = "http://localhost:5000"
 let accessToken = "";
