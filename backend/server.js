@@ -29,14 +29,8 @@ if (!fs.existsSync(uploadsDir)) {
 // CORS Configuration - DIPERBAIKI
 const corsOptions = {
     origin: [
-        'http://localhost:3000',
-        'http://localhost:5173',
         'http://127.0.0.1:5500',
-        'http://localhost:8080',
-        'https://localhost:3000',
-        'https://fe-040-dot-b-01-450713.uc.r.appspot.com', // Domain frontend
-        'https://fe-040-dot-f-01-450707.uc.r.appspot.com', // Domain frontend lainnya
-        'null' // Untuk file:// protocol saat testing lokal
+        'https://fe-040-dot-b-01-450713.uc.r.appspot.com',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -45,10 +39,7 @@ const corsOptions = {
         'Authorization',
         'X-Requested-With',
         'Accept',
-        'Origin',
-        'Access-Control-Allow-Origin',
-        'Access-Control-Allow-Headers',
-        'Access-Control-Allow-Methods'
+        'Origin'
     ],
     exposedHeaders: ['Set-Cookie'],
     optionsSuccessStatus: 200
@@ -56,15 +47,7 @@ const corsOptions = {
 
 // Middleware CORS - dipasang paling awal
 app.use(cors(corsOptions));
-
-// Handle preflight requests secara eksplisit
-app.options('*', (req, res) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.sendStatus(200);
-});
+app.options('*', cors(corsOptions)); // For preflight requests
 
 // Middleware tambahan untuk CORS debugging
 app.use((req, res, next) => {
