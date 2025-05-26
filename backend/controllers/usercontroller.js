@@ -1,6 +1,7 @@
 import User from '../models/usermodel.js'; // Import model User dari sequelize
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import db from '../config/database.js'; // ADD THIS LINE - Import your database connection
 
 // Database connection and synchronization
 (async () => {
@@ -38,45 +39,94 @@ async function register(req, res) {
 
     const { email, username, password } = req.body;
 
+    // Validation
     if (!email || !username || !password) {
-      return res.status(400).json({ message: "Email, username, dan password wajib diisi" });
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        status: "Error",
+        message: "Email, username, dan password wajib diisi" 
+      });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: "Password harus memiliki minimal 6 karakter" });
+      console.log("❌ Password too short");
+      return res.status(400).json({ 
+        status: "Error",
+        message: "Password harus memiliki minimal 6 karakter" 
+      });
     }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.log("❌ Invalid email format");
+      return res.status(400).json({ 
+        status: "Error",
+        message: "Format email tidak valid" 
+      });
+    }
+
+    console.log("✅ Validation passed, checking existing user...");
 
     // Cek email sudah ada
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ message: "Email sudah terdaftar" });
+      console.log("❌ Email already exists");
+      return res.status(400).json({ 
+        status: "Error",
+        message: "Email sudah terdaftar" 
+      });
     }
 
+    console.log("✅ Email available, hashing password...");
+
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 5);
+    const hashedPassword = await bcrypt.hash(password, 10); // Increased salt rounds for better security
+
+    console.log("✅ Password hashed, creating user...");
 
     // Buat user baru
     const newUser = await User.create({
-      email,
-      username,
+      email: email.toLowerCase().trim(), // Normalize email
+      username: username.trim(),
       password: hashedPassword,
       role: "customer"
     });
 
-    console.log("User berhasil dibuat:", newUser.id);
+    console.log("✅ User berhasil dibuat:", newUser.id);
 
-    res.status(201).json({ message: "User berhasil dibuat", userId: newUser.id });
+    res.status(201).json({ 
+      status: "Success",
+      message: "User berhasil dibuat", 
+      userId: newUser.id 
+    });
 
   } catch (error) {
     console.error("❌ ERROR di register:", error);
+    
+    // Handle specific Sequelize errors
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({
+        status: "Error",
+        message: "Data tidak valid",
+        details: error.errors.map(err => err.message)
+      });
+    }
+    
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({
+        status: "Error",
+        message: "Email atau username sudah digunakan"
+      });
+    }
+
     res.status(500).json({ 
+        status: "Error",
         message: "Internal server error", 
-        error: error.message, 
-        stack: error.stack 
+        error: error.message
     });
   }
 }
-
 
 async function login(req, res) {
   try {
@@ -89,7 +139,7 @@ async function login(req, res) {
       });
     }
 
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
 
     if (!user) {
       return res.status(400).json({
@@ -120,7 +170,7 @@ async function login(req, res) {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       sameSite: 'Lax',
-      secure: false, // ubah true kalau di production HTTPS
+      secure: process.env.NODE_ENV === 'production', // Dynamic based on environment
     });
 
     res.status(200).json({
@@ -135,8 +185,7 @@ async function login(req, res) {
     res.status(500).json({
       status: "Error",
       message: "Gagal login",
-      error: error.message,
-      stack: error.stack
+      error: error.message
     });
   }
 }
@@ -159,8 +208,7 @@ async function logout(req, res) {
     res.status(500).json({
       status: "Error",
       message: "Gagal logout",
-      error: error.message,
-      stack: error.stack
+      error: error.message
     });
   }
 }
