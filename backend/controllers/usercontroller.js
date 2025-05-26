@@ -2,6 +2,14 @@ import User from '../models/usermodel.js'; // Import model User dari sequelize
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
+// Database connection
+try {
+    await db.authenticate();
+    console.log("✅ Database connected successfully");
+} catch (error) {
+    console.error("❌ Database connection error:", error.message);
+}
+
 // Get all users
 async function getUser(req, res) {
   try {
@@ -30,6 +38,10 @@ async function register(req, res) {
       return res.status(400).json({ message: "Email, username, dan password wajib diisi" });
     }
 
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password harus memiliki minimal 6 karakter" });
+    }
+
     // Cek email sudah ada
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -53,7 +65,11 @@ async function register(req, res) {
 
   } catch (error) {
     console.error("❌ ERROR di register:", error);
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    res.status(500).json({ 
+        message: "Internal server error", 
+        error: error.message, 
+        stack: error.stack 
+    });
   }
 }
 
