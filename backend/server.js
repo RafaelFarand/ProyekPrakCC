@@ -18,6 +18,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const API_URL = "https://notes-1061342868557.us-central1.run.app";
+
 // Buat folder uploads jika belum ada
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -27,19 +29,20 @@ if (!fs.existsSync(uploadsDir)) {
 // CORS Configuration - DIPERBAIKI
 const corsOptions = {
     origin: [
-        'https://fe-040-dot-b-01-450713.uc.r.appspot.com',
-        'http://localhost:3000', // untuk development
-        'http://localhost:5173', // untuk Vite
-        'http://127.0.0.1:5500',  // untuk Live Server
-        'http://localhost:8080', // untuk development tambahan
-        'https://localhost:3000', // untuk HTTPS development
-        'null' // untuk file:// protocol saat testing lokal
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:5500',
+        'http://localhost:8080',
+        'https://localhost:3000',
+        'https://fe-040-dot-b-01-450713.uc.r.appspot.com', // Tambahkan domain frontend Anda
+        'https://fe-040-dot-f-01-450707.uc.r.appspot.com', // Tambahkan domain frontend lainnya jika ada
+        'null' // Untuk file:// protocol saat testing lokal
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: [
-        'Content-Type', 
-        'Authorization', 
+        'Content-Type',
+        'Authorization',
         'X-Requested-With',
         'Accept',
         'Origin',
@@ -48,17 +51,17 @@ const corsOptions = {
         'Access-Control-Allow-Methods'
     ],
     exposedHeaders: ['Set-Cookie'],
-    optionsSuccessStatus: 200 // untuk support legacy browsers
+    optionsSuccessStatus: 200 // Untuk support legacy browsers
 };
 
 // Middleware CORS - dipasang paling awal
 app.use(cors(corsOptions));
 
-// Handle preflight requests secara eksplisit untuk semua routes
+// Handle preflight requests secara eksplisit
 app.options('*', (req, res) => {
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Access-Control-Allow-Methods');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
     res.header('Access-Control-Allow-Credentials', 'true');
     res.sendStatus(200);
 });
