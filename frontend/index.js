@@ -1,4 +1,4 @@
-const API_URL = "https://notes-651881126563.us-central1.run.app"; // Ganti dengan URL backend Anda
+const API_URL = "https://notes-1061342868557.us-central1.run.app"; // Ganti dengan URL backend Anda
 let accessToken = "";
 let currentUserId = null;
 let currentUserRole = "customer";
