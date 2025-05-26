@@ -21,32 +21,41 @@ async function getUser(req, res) {
 // Register new user
 async function register(req, res) {
   try {
-    console.log("Request body:", req.body);
+    console.log("===== REGISTER START =====");
+    console.log("Request Body:", req.body);
+
     const { email, username, password } = req.body;
+
     if (!email || !username || !password) {
-      return res.status(400).json({ message: "Data tidak lengkap" });
+      return res.status(400).json({ message: "Email, username, dan password wajib diisi" });
     }
 
+    // Cek email sudah ada
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: "Email sudah terdaftar" });
     }
 
-    // langsung simpan password apa adanya (hanya tes, jangan dipakai di production)
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 5);
+
+    // Buat user baru
     const newUser = await User.create({
       email,
       username,
-      password,
-      role: "customer",
+      password: hashedPassword,
+      role: "customer"
     });
 
+    console.log("User berhasil dibuat:", newUser.id);
+
     res.status(201).json({ message: "User berhasil dibuat", userId: newUser.id });
+
   } catch (error) {
-    console.error("❌ Register error:", error);
-    res.status(500).json({ message: error.message });
+    console.error("❌ ERROR di register:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
   }
 }
-
 
 
 async function login(req, res) {
