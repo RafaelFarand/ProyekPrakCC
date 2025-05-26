@@ -1,18 +1,6 @@
-# 🛠️ REST API Documentation
+#  REST API Documentation
 
-This project is a Node.js Express backend that handles user authentication, sparepart management, cart and order functionality, as well as file uploads. It supports token-based authentication and CORS for frontend communication.
-
----
-
-## 🔗 Base URL
-
-```
-http://localhost:5000/
-```
-
----
-
-## 🔐 Authentication Routes
+## Authentication Routes
 
 | Method | Endpoint      | Auth     | Description             |
 |--------|---------------|----------|-------------------------|
@@ -23,7 +11,7 @@ http://localhost:5000/
 
 ---
 
-## 🧾 Sparepart Routes
+## Sparepart Routes
 
 | Method | Endpoint             | Auth | Description              |
 |--------|----------------------|------|--------------------------|
@@ -36,7 +24,7 @@ http://localhost:5000/
 
 ---
 
-## 🛒 Cart Routes
+## Cart Routes
 
 | Method | Endpoint               | Auth | Description           |
 |--------|------------------------|------|-----------------------|
@@ -48,7 +36,7 @@ http://localhost:5000/
 
 ---
 
-## 📦 Order Routes
+## Order Routes
 
 | Method | Endpoint               | Auth | Description           |
 |--------|------------------------|------|-----------------------|
@@ -58,7 +46,7 @@ http://localhost:5000/
 
 ---
 
-## 📋 Pembelian Routes (Legacy)
+##  Pembelian Routes (Legacy)
 
 | Method | Endpoint                    | Auth | Description                    |
 |--------|-----------------------------|------|--------------------------------|
@@ -68,14 +56,6 @@ http://localhost:5000/
 | PUT    | `/pembelian/:id`            | ✅    | Update purchase form by ID     |
 | DELETE | `/pembelian/:id`            | ✅    | Delete purchase form by ID     |
 
----
-
-## 📂 File Upload
-
-- Folder: `/uploads`
-- URL Example: `http://localhost:5000/uploads/filename.jpg`
-- Max Size: 5MB
-- Allowed via `multipart/form-data`
 
 ---
 
@@ -86,28 +66,3 @@ http://localhost:5000/
 | GET    | `/health`      | Health check             |
 | GET    | `/test-cors`   | Test CORS headers        |
 | GET    | `/test`        | Simple API response test |
-
----
-
-## 🌍 CORS Configuration
-
-The server accepts requests from:
-
-- `http://localhost:3000`
-- `http://localhost:5173`
-- `http://127.0.0.1:5500`
-- `http://localhost:8080`
-- `https://localhost:3000`
-- `https://fe-040-dot-b-01-450713.uc.r.appspot.com`
-- `null` (e.g. `file://` testing)
-
----
-
-## 📦 Tech Stack
-
-- Node.js
-- Express
-- Sequelize
-- Multer (for file uploads)
-- JSON Web Token (JWT)
-- CORS & Cookie-parser
