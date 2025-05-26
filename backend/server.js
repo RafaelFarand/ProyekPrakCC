@@ -190,26 +190,16 @@ app.use((err, req, res, next) => {
 })();
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server berjalan di port ${PORT}`);
-    console.log(`📁 Uploads folder: ${uploadsDir}`);
-    console.log("\n🌐 CORS configured for:");
-    corsOptions.origin.forEach(url => console.log(`   - ${url}`));
-    
-    console.log("\n🛒 Cart/Order endpoints available:");
-    console.log("   - GET /cart/:id_user - Get cart items");
-    console.log("   - POST /cart - Add to cart");
-    console.log("   - PUT /cart/:id - Update cart item");
-    console.log("   - DELETE /cart/:id - Remove from cart");
-    console.log("   - POST /cart/checkout - Checkout cart");
-    console.log("   - GET /orders/:id_user - Get user orders");
-    console.log("   - PUT /orders/:id/pay - Process payment");
-    console.log("   - PUT /orders/:id/cancel - Cancel order");
-    
-    console.log("\n🔧 Test endpoints:");
-    console.log("   - GET /health - Health check");
-    console.log("   - GET /test-cors - CORS test");
-    console.log("   - GET /test - Simple test");
-    
-    console.log(`\n✅ Server ready at: http://localhost:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server berjalan di port ${PORT}`);
+    console.log(`Uploads folder: ${uploadsDir}`);
+    console.log("New Cart/Order endpoints available:");
+    console.log("- GET /cart/:id_user - Get cart items");
+    console.log("- POST /cart - Add to cart");
+    console.log("- PUT /cart/:id - Update cart item");
+    console.log("- DELETE /cart/:id - Remove from cart");
+    console.log("- POST /cart/checkout - Checkout cart");
+    console.log("- GET /orders/:id_user - Get user orders");
+    console.log("- PUT /orders/:id/pay - Process payment");
+    console.log("- PUT /orders/:id/cancel - Cancel order");
 });

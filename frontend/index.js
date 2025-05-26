@@ -627,3 +627,22 @@ document.addEventListener('DOMContentLoaded', () => {
         showLogin();
     }
 });
+
+// --- INISIALISASI ---
+// Cek apakah ada user di localStorage saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        const user = JSON.parse(storedUser);
+        currentUserId = user.id;
+        currentUserRole = user.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
+        accessToken = ''; // Jika token disimpan terpisah, ambil dari sana
+        if (currentUserRole === 'admin') {
+            showAdminDashboard();
+        } else {
+            showCustomerDashboard();
+        }
+    } else {
+        showLogin();
+    }
+});
