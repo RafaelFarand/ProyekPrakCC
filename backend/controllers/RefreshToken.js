@@ -3,11 +3,28 @@ import User from "../models/usermodel.js";
 
 export async function refreshToken(req, res) {
   try {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.sendStatus(401);
+    const token = req.cookies.refreshToken;
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
 
+    // Verifikasi token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+      console.error("JWT verification failed:", err.message);
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
+    }
+
+    // Cek user di DB dan cocokan refresh_token
     const user = await User.findOne({
-      where: { refresh_token: refreshToken },
+      where: {
+        id: decoded.id,
+        refresh_token: token,
+      },
     });
 
     if (!user) return res.sendStatus(403);
