@@ -3,43 +3,52 @@ import User from "../models/usermodel.js";
 
 export async function refreshToken(req, res) {
   try {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.sendStatus(401); // Unauthorized: tidak ada cookie
+    const token = req.cookies.refreshToken;
+    if (!token) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
 
-    // Verifikasi refresh token
-    jwt.verify(
-      refreshToken,
-      process.env.REFRESH_TOKEN_SECRET,
-      async (err, decoded) => {
-        if (err) return res.sendStatus(403); // Forbidden: token rusak atau kedaluwarsa
+    // Verifikasi token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+    } catch (err) {
+      console.error("JWT verification failed:", err.message);
+      return res
+        .status(403)
+        .json({ message: "Invalid or expired refresh token" });
+    }
 
-        // Cari user berdasarkan ID hasil decoding token, BUKAN hanya dari token string-nya
-        const user = await User.findOne({
-          where: {
-            id: decoded.id,
-            refresh_token: refreshToken,
-          },
-        });
+    // Cek user di DB dan cocokan refresh_token
+    const user = await User.findOne({
+      where: {
+        id: decoded.id,
+        refresh_token: token,
+      },
+    });
 
-        if (!user) return res.sendStatus(403); // Token valid, tapi tidak ditemukan user
+    if (!user) {
+      return res
+        .status(403)
+        .json({ message: "User not found or token mismatch" });
+    }
 
-        // Buat access token baru
-        const accessToken = jwt.sign(
-          {
-            id: user.id,
-            email: user.email,
-            username: user.username,
-          },
-          process.env.ACCESS_TOKEN_SECRET,
-          {
-            expiresIn: "30m", // sesuaikan sesuai kebutuhan
-          }
-        );
-
-        res.json({ accessToken });
-      }
+    // Buat access token baru
+    const accessToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "30m" }
     );
+
+    return res.json({ accessToken });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Refresh token handler error:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Server error", detail: error.message });
   }
 }
