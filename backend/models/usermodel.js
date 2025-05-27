@@ -1,34 +1,33 @@
 import { Sequelize } from "sequelize";
-import db from "../config/database.js";
+import db from "../config/Database.js";
 
 const { DataTypes } = Sequelize;
 
-const User = db.define(
-  "user",
-  {
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
+const Users = db.define('users', {
+    name: {
+        type: DataTypes.STRING
     },
-    username: {
-      type: DataTypes.STRING,
-      allowNull: false,
+    email: {
+        type: DataTypes.STRING,
+        unique: true
     },
     password: {
-      type: DataTypes.STRING,
-      allowNull: false,
+        type: DataTypes.STRING
     },
     role: {
-      type: DataTypes.ENUM("admin", "customer"),
-      defaultValue: "customer",
-      allowNull: false,
+        type: DataTypes.ENUM('admin', 'customer'),
+        defaultValue: 'customer'
     },
-  },
-  {
-    freezeTableName: true,
-    timestamps: true,
-  }
-);
+    refresh_token: {
+        type: DataTypes.TEXT
+    }
+}, {
+    indexes: [
+        {
+            unique: true,
+            fields: ['email']
+        }
+    ]
+});
 
-export default User;
+export default Users;
