@@ -1,398 +1,184 @@
 import Cart from "../models/cartmodel.js";
-import User from "../models/usermodel.js";
-import Sparepart from "../models/sparepartmodel.js";
-import { Op } from "sequelize";
+import Order from "../models/modelpembelian.js";
+import Product from "../models/sparepartmodel.js";
 
-// GET cart items untuk user tertentu
-export async function getCartItems(req, res) {
+export const getCartItems = async(req, res) => {
     try {
-        const { id_user } = req.params;
-        
-        const cartItems = await Cart.findAll({
+        const cart = await Cart.findAll({
             where: {
-                id_user: id_user,
-                status: 'cart'
+                user_id: req.params.id_user
             },
-            include: [
-                {
-                    model: User,
-                    attributes: ["email", "username"]
-                },
-                {
-                    model: Sparepart,
-                    attributes: ["name", "price", "stock", "image"]
-                }
-            ],
-            order: [['createdAt', 'DESC']]
+            include: [{
+                model: Product,
+                attributes: ['name', 'price', 'image', 'url']
+            }]
         });
-
-        res.status(200).json({
-            status: "Success",
-            message: "Cart items retrieved successfully",
-            data: cartItems
-        });
+        res.json(cart);
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
+        res.status(500).json({msg: error.message});
     }
 }
 
-// POST add item to cart
-export async function addToCart(req, res) {
+export const addToCart = async(req, res) => {
+    const {user_id, product_id, quantity} = req.body;
     try {
-        const { id_user, id_sparepart, jumlah } = req.body;
-        
-        // Validasi input
-        if (!id_user || !id_sparepart || !jumlah) {
-            return res.status(400).json({
-                status: "Error",
-                message: "id_user, id_sparepart, dan jumlah wajib diisi"
-            });
-        }
-
-        // Cek stok sparepart
-        const sparepart = await Sparepart.findByPk(id_sparepart);
-        if (!sparepart) {
-            return res.status(404).json({
-                status: "Error",
-                message: "Sparepart tidak ditemukan"
-            });
-        }
-
-        if (sparepart.stock < jumlah) {
-            return res.status(400).json({
-                status: "Error",
-                message: "Stok tidak mencukupi"
-            });
-        }
-
-        // Cek apakah item sudah ada di cart
-        const existingCartItem = await Cart.findOne({
+        const existingItem = await Cart.findOne({
             where: {
-                id_user: id_user,
-                id_sparepart: id_sparepart,
-                status: 'cart'
+                user_id: user_id,
+                product_id: product_id
             }
         });
 
-        if (existingCartItem) {
-            // Update jumlah jika item sudah ada
-            const newJumlah = existingCartItem.jumlah + parseInt(jumlah);
-            
-            if (sparepart.stock < newJumlah) {
-                return res.status(400).json({
-                    status: "Error",
-                    message: "Stok tidak mencukupi untuk jumlah total"
-                });
-            }
-
-            existingCartItem.jumlah = newJumlah;
-            await existingCartItem.save();
-
-            res.status(200).json({
-                status: "Success",
-                message: "Item berhasil diupdate di cart",
-                data: existingCartItem
+        if(existingItem) {
+            await Cart.update({
+                quantity: existingItem.quantity + parseInt(quantity)
+            }, {
+                where: {
+                    id: existingItem.id
+                }
             });
         } else {
-            // Tambah item baru ke cart
-            const cartItem = await Cart.create({
-                id_user,
-                id_sparepart,
-                jumlah: parseInt(jumlah),
-                status: 'cart'
-            });
-
-            res.status(201).json({
-                status: "Success",
-                message: "Item berhasil ditambahkan ke cart",
-                data: cartItem
+            await Cart.create({
+                user_id: user_id,
+                product_id: product_id,
+                quantity: quantity
             });
         }
+        res.json({msg: "Product added to cart"});
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
+        res.status(500).json({msg: error.message});
     }
 }
 
-// PUT update cart item (hanya untuk status cart)
-export async function updateCartItem(req, res) {
+export const updateCartItem = async(req, res) => {
     try {
-        const { id } = req.params;
-        const { jumlah } = req.body;
-
-        const cartItem = await Cart.findByPk(id);
-        if (!cartItem) {
-            return res.status(404).json({
-                status: "Error",
-                message: "Item cart tidak ditemukan"
-            });
-        }
-
-        // Hanya bisa update jika status masih cart
-        if (cartItem.status !== 'cart') {
-            return res.status(400).json({
-                status: "Error",
-                message: "Tidak dapat mengubah item yang sudah dipesan atau dibayar"
-            });
-        }
-
-        // Validasi stok jika jumlah diubah
-        if (jumlah) {
-            const sparepart = await Sparepart.findByPk(cartItem.id_sparepart);
-            if (sparepart.stock < jumlah) {
-                return res.status(400).json({
-                    status: "Error",
-                    message: "Stok tidak mencukupi"
-                });
-            }
-            cartItem.jumlah = parseInt(jumlah);
-        }
-
-        await cartItem.save();
-
-        res.status(200).json({
-            status: "Success",
-            message: "Item cart berhasil diupdate",
-            data: cartItem
-        });
-    } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
-    }
-}
-
-// DELETE remove item from cart (hanya untuk status cart)
-export async function removeFromCart(req, res) {
-    try {
-        const { id } = req.params;
-
-        const cartItem = await Cart.findByPk(id);
-        if (!cartItem) {
-            return res.status(404).json({
-                status: "Error",
-                message: "Item cart tidak ditemukan"
-            });
-        }
-
-        // Hanya bisa hapus jika status masih cart
-        if (cartItem.status !== 'cart') {
-            return res.status(400).json({
-                status: "Error",
-                message: "Tidak dapat menghapus item yang sudah dipesan atau dibayar"
-            });
-        }
-
-        await cartItem.destroy();
-
-        res.status(200).json({
-            status: "Success",
-            message: "Item berhasil dihapus dari cart"
-        });
-    } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
-    }
-}
-
-// POST checkout - mengubah status dari cart ke ordered
-export async function checkout(req, res) {
-    try {
-        const { id_user } = req.body;
-
-        // Ambil semua item cart untuk user
-        const cartItems = await Cart.findAll({
+        await Cart.update({
+            quantity: req.body.quantity
+        }, {
             where: {
-                id_user: id_user,
-                status: 'cart'
+                id: req.params.id
+            }
+        });
+        res.json({msg: "Cart updated"});
+    } catch (error) {
+        res.status(500).json({msg: error.message});
+    }
+}
+
+export const removeFromCart = async(req, res) => {
+    try {
+        await Cart.destroy({
+            where: {
+                id: req.params.id
+            }
+        });
+        res.json({msg: "Item removed from cart"});
+    } catch (error) {
+        res.status(500).json({msg: error.message});
+    }
+}
+
+export const checkout = async(req, res) => {
+    try {
+        const {user_id, items} = req.body;
+        
+        for(let item of items) {
+            const product = await Product.findOne({
+                where: {id: item.product_id}
+            });
+            
+            if(product.stock < item.quantity) {
+                return res.status(400).json({msg: `${product.name} stock not enough`});
+            }
+
+            await Order.create({
+                user_id: user_id,
+                product_id: item.product_id,
+                quantity: item.quantity,
+                total_price: item.quantity * product.price,
+                status: 'pending'
+            });
+
+            await Product.update({
+                stock: product.stock - item.quantity
+            }, {
+                where: {id: item.product_id}
+            });
+        }
+
+        await Cart.destroy({
+            where: {user_id: user_id}
+        });
+
+        res.json({msg: "Checkout successful"});
+    } catch (error) {
+        res.status(500).json({msg: error.message});
+    }
+}
+
+export const getOrders = async(req, res) => {
+    try {
+        const orders = await Order.findAll({
+            where: {
+                user_id: req.params.id_user
             },
-            include: [
-                {
-                    model: Sparepart,
-                    attributes: ["name", "price", "stock"]
-                }
-            ]
+            include: [{
+                model: Product,
+                attributes: ['name', 'price', 'image', 'url']
+            }],
+            order: [['createdAt', 'DESC']]
         });
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({msg: error.message});
+    }
+}
 
-        if (cartItems.length === 0) {
-            return res.status(400).json({
-                status: "Error",
-                message: "Cart kosong"
-            });
-        }
-
-        // Validasi stok untuk semua item
-        for (let item of cartItems) {
-            if (item.sparepart.stock < item.jumlah) {
-                return res.status(400).json({
-                    status: "Error",
-                    message: `Stok ${item.sparepart.name} tidak mencukupi`
-                });
+export const processPayment = async(req, res) => {
+    try {
+        await Order.update({
+            status: 'paid'
+        }, {
+            where: {
+                id: req.params.id
             }
-        }
-
-        // Update semua item cart menjadi ordered dan kurangi stok
-        for (let item of cartItems) {
-            // Update status cart
-            item.status = 'ordered';
-            item.tanggal_order = new Date();
-            await item.save();
-
-            // Kurangi stok sparepart
-            const sparepart = await Sparepart.findByPk(item.id_sparepart);
-            sparepart.stock -= item.jumlah;
-            await sparepart.save();
-        }
-
-        res.status(200).json({
-            status: "Success",
-            message: "Checkout berhasil",
-            data: cartItems
         });
+        res.json({msg: "Payment processed successfully"});
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
+        res.status(500).json({msg: error.message});
     }
 }
 
-// GET orders - ambil pesanan user (status ordered, paid, cancelled)
-export async function getOrders(req, res) {
+export const cancelOrder = async(req, res) => {
     try {
-        const { id_user } = req.params;
-        const { status } = req.query; // optional filter by status
+        const order = await Order.findOne({
+            where: {id: req.params.id}
+        });
 
-        let whereCondition = {
-            id_user: id_user,
-            status: {
-                [Op.in]: ['ordered', 'paid', 'cancelled']
+        if(order.status === 'paid') {
+            return res.status(400).json({msg: "Cannot cancel paid order"});
+        }
+
+        const product = await Product.findOne({
+            where: {id: order.product_id}
+        });
+
+        await Product.update({
+            stock: product.stock + order.quantity
+        }, {
+            where: {id: order.product_id}
+        });
+
+        await Order.update({
+            status: 'cancelled'
+        }, {
+            where: {
+                id: req.params.id
             }
-        };
-
-        if (status && ['ordered', 'paid', 'cancelled'].includes(status)) {
-            whereCondition.status = status;
-        }
-
-        const orders = await Cart.findAll({
-            where: whereCondition,
-            include: [
-                {
-                    model: User,
-                    attributes: ["email", "username"]
-                },
-                {
-                    model: Sparepart,
-                    attributes: ["name", "price", "stock", "image"]
-                }
-            ],
-            order: [['tanggal_order', 'DESC']]
         });
 
-        res.status(200).json({
-            status: "Success",
-            message: "Orders retrieved successfully",
-            data: orders
-        });
+        res.json({msg: "Order cancelled successfully"});
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
-    }
-}
-
-// PUT payment - update status dari ordered ke paid
-export async function processPayment(req, res) {
-    try {
-        const { id } = req.params;
-
-        const order = await Cart.findByPk(id);
-        if (!order) {
-            return res.status(404).json({
-                status: "Error",
-                message: "Order tidak ditemukan"
-            });
-        }
-
-        if (order.status !== 'ordered') {
-            return res.status(400).json({
-                status: "Error",
-                message: "Order tidak dalam status yang dapat dibayar"
-            });
-        }
-
-        order.status = 'paid';
-        order.tanggal_bayar = new Date();
-        await order.save();
-
-        res.status(200).json({
-            status: "Success",
-            message: "Pembayaran berhasil diproses",
-            data: order
-        });
-    } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
-    }
-}
-
-// PUT cancel order - update status dari ordered ke cancelled (kembalikan stok)
-export async function cancelOrder(req, res) {
-    try {
-        const { id } = req.params;
-
-        const order = await Cart.findByPk(id);
-        if (!order) {
-            return res.status(404).json({
-                status: "Error",
-                message: "Order tidak ditemukan"
-            });
-        }
-
-        if (order.status !== 'ordered') {
-            return res.status(400).json({
-                status: "Error",
-                message: "Hanya order dengan status 'ordered' yang dapat dibatalkan"
-            });
-        }
-
-        // Kembalikan stok
-        const sparepart = await Sparepart.findByPk(order.id_sparepart);
-        sparepart.stock += order.jumlah;
-        await sparepart.save();
-
-        // Update status order
-        order.status = 'cancelled';
-        await order.save();
-
-        res.status(200).json({
-            status: "Success",
-            message: "Order berhasil dibatalkan dan stok dikembalikan",
-            data: order
-        });
-    } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ 
-            status: "Error",
-            message: error.message 
-        });
+        res.status(500).json({msg: error.message});
     }
 }
