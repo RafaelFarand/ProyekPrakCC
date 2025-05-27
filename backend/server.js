@@ -47,13 +47,13 @@ app.use((req, res, next) => {
 // Main Middleware
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// Upload Directory Setup
+// Buat folder uploads jika belum ada
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
 // Static Files Serving with Cache Control
@@ -65,102 +65,85 @@ app.use("/uploads", express.static(uploadsDir, {
 
 // Multer Error Handler
 app.use((error, req, res, next) => {
-    if (error instanceof multer.MulterError) {
-        if (error.code === 'LIMIT_FILE_SIZE') {
-            return res.status(400).json({
-                status: false,
-                message: 'File terlalu besar. Maksimal 5MB'
-            });
-        }
-        return res.status(400).json({
-            status: false,
-            message: error.message
-        });
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'File terlalu besar. Maksimal 5MB' });
     }
     next(error);
 });
 
-// API Health Check
+// Health check endpoints
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'OK',
         message: 'Server is running',
-        environment: process.env.NODE_ENV,
         timestamp: new Date().toISOString()
     });
 });
 
-// Main Routes
-app.use('/api', router);
+app.get('/test-cors', (req, res) => {
+    res.json({
+        message: 'CORS test successful',
+        origin: req.headers.origin,
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        headers: req.headers
+    });
+});
 
-// 404 Handler
+app.get('/test', (req, res) => {
+    res.json({
+        message: 'Server responding successfully',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Routing utama
+app.use('/', router);
+
+// Catch-all untuk route yang tidak ditemukan
 app.use('*', (req, res) => {
     res.status(404).json({
-        status: false,
         message: 'Route not found',
-        path: req.originalUrl,
-        method: req.method
+        method: req.method,
+        path: req.originalUrl
     });
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    console.error('Error:', err);
-    
-    const errorResponse = {
-        status: false,
-        message: 'Internal Server Error'
-    };
-
-    if (process.env.NODE_ENV === 'development') {
-        errorResponse.error = err.message;
-        errorResponse.stack = err.stack;
-    }
-
-    res.status(err.status || 500).json(errorResponse);
+    console.error('Global Error:', err);
+    res.status(500).json({
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
 });
 
-// Database Connection
-const connectDB = async () => {
+// Koneksi & Sinkronisasi database (tidak exit jika error)
+(async () => {
     try {
         await db.authenticate();
         console.log("✅ Database connected successfully");
-        
         await db.sync({ alter: true });
-        console.log("✅ Database synchronized");
-        
-        return true;
+        console.log("✅ Models synchronized");
     } catch (error) {
-        console.error("⚠️ Database error:", error.message);
-        return false;
+        console.error("⚠️ Database connection or sync failed:", error.message);
+        // Jangan process.exit(1), agar Cloud Run tetap bisa jalan
     }
-};
+})();
 
-// Server Startup
-const startServer = async () => {
-    const dbConnected = await connectDB();
-    
-    if (!dbConnected && process.env.NODE_ENV === 'production') {
-        console.error("Critical database connection failure in production");
-        process.exit(1);
-    }
-
-    app.listen(PORT, () => {
-        console.log(`
-🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}
-📁 Upload directory: ${uploadsDir}
-🌐 CORS enabled for: ${corsOptions.origin}
-        `);
-    });
-};
-
-startServer().catch(console.error);
-
-// Graceful Shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received. Shutting down gracefully...');
-    db.close().then(() => {
-        console.log('Database connection closed.');
-        process.exit(0);
-    });
+// Start server
+app.listen(PORT, () => {
+    console.log(`🚀 Server berjalan di port ${PORT}`);
+    console.log(`📁 Uploads folder: ${uploadsDir}`);
+    console.log("📦 Available endpoints:");
+    console.log("- GET /health");
+    console.log("- GET /test");
+    console.log("- GET /test-cors");
+    console.log("- GET /spareparts");
+    console.log("- POST /cart");
+    console.log("- POST /cart/checkout");
+    console.log("- GET /orders/:id_user");
+    console.log("- PUT /orders/:id/pay");
+    console.log("- PUT /orders/:id/cancel");
 });
