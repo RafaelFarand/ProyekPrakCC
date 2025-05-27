@@ -3,48 +3,27 @@ import User from "../models/usermodel.js";
 
 export async function refreshToken(req, res) {
   try {
-    const token = req.cookies.refreshToken;
-    if (!token) {
-      return res.status(401).json({ message: "No refresh token provided" });
-    }
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) return res.sendStatus(401);
 
-    // Verifikasi token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
-    } catch (err) {
-      console.error("JWT verification failed:", err.message);
-      return res
-        .status(403)
-        .json({ message: "Invalid or expired refresh token" });
-    }
-
-    // Cek user di DB dan cocokan refresh_token
     const user = await User.findOne({
-      where: {
-        id: decoded.id,
-        refresh_token: token,
-      },
+      where: { refresh_token: refreshToken },
     });
 
-    if (!user) {
-      return res
-        .status(403)
-        .json({ message: "User not found or token mismatch" });
-    }
+    if (!user) return res.sendStatus(403);
 
-    // Buat access token baru
-    const accessToken = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-      },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "30m" }
-    );
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
+      if (err) return res.sendStatus(403);
 
-    return res.json({ accessToken });
+      const { id, email, username } = user;
+      const accessToken = jwt.sign(
+        { id, email, username },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "30m" }
+      );
+
+      res.json({ accessToken });
+    });
   } catch (error) {
     console.error("Refresh token handler error:", error.message);
     return res
