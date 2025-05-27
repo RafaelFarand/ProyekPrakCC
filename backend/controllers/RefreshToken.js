@@ -27,20 +27,24 @@ export async function refreshToken(req, res) {
       },
     });
 
-    if (!user) return res.sendStatus(403);
+    if (!user) {
+      return res
+        .status(403)
+        .json({ message: "User not found or token mismatch" });
+    }
 
-    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
-      if (err) return res.sendStatus(403);
+    // Buat access token baru
+    const accessToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "30m" }
+    );
 
-      const { id, email, username } = user;
-      const accessToken = jwt.sign(
-        { id, email, username },
-        process.env.ACCESS_TOKEN_SECRET,
-        { expiresIn: "30m" }
-      );
-
-      res.json({ accessToken });
-    });
+    return res.json({ accessToken });
   } catch (error) {
     console.error("Refresh token handler error:", error.message);
     return res
