@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 import fs from "fs";
 import multer from "multer";
 import db from "./config/database.js";
@@ -32,15 +31,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // ✅ Middleware
-app.use(cookieParser());
+// Hapus cookieParser karena tidak pakai refresh token/cookie lagi
+// app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-
-// ✅ Logging cookies for debug
-app.use((req, res, next) => {
-  console.log("🔍 Incoming Cookies:", req.cookies);
-  next();
-});
 
 // ✅ Buat folder uploads jika belum ada
 const uploadsDir = path.join(__dirname, "uploads");
