@@ -28,7 +28,7 @@ const PORT = process.env.PORT || 5000;
 const corsOptions = {
     origin: process.env.NODE_ENV === 'production' 
         ? 'https://fe-040-dot-b-01-450713.uc.r.appspot.com'
-        : 'http://127.0.0.1:5500',
+        : ['http://localhost:5000', 'http://localhost:3000', 'http://127.0.0.1:5500'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],

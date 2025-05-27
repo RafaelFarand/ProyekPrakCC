@@ -16,24 +16,6 @@ import {
   updateSparepart,
   deleteSparepart,
 } from "../controllers/sparepartcontroller.js";
-import express from "express";
-import upload from "../middleware/upload.js";
-
-import {
-  login,
-  register,
-  logout,
-  getUser,
-} from "../controllers/usercontroller.js";
-import { verifyToken } from "../middleware/VerifyToken.js";
-import { refreshToken } from "../controllers/RefreshToken.js";
-
-import {
-  getSpareparts,
-  createSparepart,
-  updateSparepart,
-  deleteSparepart,
-} from "../controllers/sparepartcontroller.js";
 
 import {
   getFormPembelian, // Diubah dari getFormPembelian

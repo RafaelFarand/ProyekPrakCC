@@ -1,7 +1,7 @@
 // API URL Configuration
 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? "http://localhost:5000/api"
-    : "https://notes-1061342868557.us-central1.run.app/api";
+    ? "http://localhost:5000"  // Remove /api here
+    : "https://notes-1061342868557.us-central1.run.app";
 
 // Global variables
 let accessToken = localStorage.getItem('accessToken');
@@ -19,7 +19,7 @@ axios.interceptors.response.use(
         if (error.response?.status === 403 && !error.config._retry) {
             error.config._retry = true;
             try {
-                const response = await axios.get(`${API_URL}/token`);
+                const response = await axios.get(`${API_URL}/api/token`);
                 const newToken = response.data.accessToken;
                 localStorage.setItem('accessToken', newToken);
                 accessToken = newToken;
@@ -79,69 +79,70 @@ function showAddForm() {
 // --- AUTENTIKASI ---
 // Modified register function
 async function register() {
-  try {
-    const email = document.getElementById("regEmail").value;
-    const username = document.getElementById("regUsername").value;
-    const password = document.getElementById("regPassword").value;
+    try {
+        const email = document.getElementById('regEmail').value;
+        const username = document.getElementById('regUsername').value;
+        const password = document.getElementById('regPassword').value;
 
         if (!email || !username || !password) {
             alert('Semua field harus diisi!');
             return;
         }
 
-        const response = await axios.post(`${API_URL}/register`, {
+        await axios.post(`${API_URL}/api/register`, {
             email,
             username,
             password
         });
 
-        if (response.status === 201) {
-            alert('Registrasi berhasil! Silakan login.');
-            showLogin();
-        }
+        alert('Registrasi berhasil! Silakan login.');
+        showLogin();
     } catch (error) {
-        console.error('Error registrasi:', error);
-        alert(`Gagal registrasi: ${error.response?.data?.message || 'Terjadi kesalahan'}`);
+        console.error("Error registrasi:", error);
+        alert(error.response?.data?.message || 'Registrasi gagal! Pastikan email belum terdaftar.');
     }
 }
 
 // Modified login function
 async function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-
-    if (!email || !password) {
-        alert('Email dan password harus diisi!');
-        return;
-    }
-
     try {
-        const response = await axios.post(`${API_URL}/login`, {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+            alert('Email dan password harus diisi!');
+            return;
+        }
+
+        const response = await axios.post(`${API_URL}/api/login`, {
             email,
             password
-        }, {
-            withCredentials: true  // **Tambah ini**
         });
+
+        const { accessToken: token, user } = response.data;
         
-        accessToken = response.data.accessToken;
-        currentUserId = response.data.safeUserData.id;
-        
-        // Untuk demo, pengguna dianggap admin jika username mengandung "admin"
-        currentUserRole = response.data.safeUserData.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
-        
-        if (currentUserRole === 'admin') {
+        accessToken = token;
+        currentUserId = user.id;
+        currentUserRole = user.role;
+
+        localStorage.setItem('accessToken', token);
+        localStorage.setItem('userId', user.id);
+        localStorage.setItem('userRole', user.role);
+
+        if (user.role === 'admin') {
             showAdminDashboard();
         } else {
             showCustomerDashboard();
         }
     } catch (error) {
-        alert(`Login gagal: ${error.response?.data?.message || error.message}`);
+        console.error("Error login:", error);
+        alert('Login gagal! Periksa email dan password Anda.');
     }
 }
 
 async function logout() {
     try {
-        await axios.get(`${API_URL}/logout`, {
+        await axios.get(`${API_URL}/api/logout`, {
             withCredentials: true  // **Tambah ini**
         });
         accessToken = '';
@@ -160,16 +161,18 @@ async function logout() {
 // Modified refreshToken function
 async function refreshToken() {
     try {
-        const response = await axios.get(`${API_URL}/token`, {
-            withCredentials: true  // **Tambah ini supaya cookie refreshToken terkirim**
+        const response = await axios.get(`${API_URL}/api/token`, {
+            withCredentials: true
         });
-        accessToken = response.data.accessToken;
-        return true;
+        
+        if (response.data.accessToken) {
+            accessToken = response.data.accessToken;
+            return true;
+        }
+        return false;
     } catch (error) {
         console.error("Token refresh failed:", error);
-        accessToken = '';
-        currentUserId = null;
-        showLogin();
+        await logout();
         return false;
     }
 }
@@ -180,48 +183,26 @@ async function apiCall(method, endpoint, data = null, formData = false) {
     try {
         const config = {
             method,
-            url: `${API_URL}${endpoint}`,
-            headers: { 
+            url: `${API_URL}/api${endpoint}`, // Add /api here
+            headers: {
                 'Authorization': `Bearer ${accessToken}`
             },
-            withCredentials: true  // **Tambah ini supaya cookie juga ikut di request API selain login/token**
+            withCredentials: true
         };
 
         if (data) {
+            config.data = data;
             if (formData) {
-                config.data = data;
                 config.headers['Content-Type'] = 'multipart/form-data';
-            } else {
-                config.data = data;
             }
         }
 
-        return await axios(config);
+        const response = await axios(config);
+        return response.data;
     } catch (error) {
-        if (error.response && error.response.status === 403) {
-            const refreshed = await refreshToken();
-            if (refreshed) {
-                // Retry with new token
-                const config = {
-                    method,
-                    url: `${API_URL}${endpoint}`,
-                    headers: { 
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    withCredentials: true  // **Tambah ini**
-                };
-
-                if (data) {
-                    if (formData) {
-                        config.data = data;
-                        config.headers['Content-Type'] = 'multipart/form-data';
-                    } else {
-                        config.data = data;
-                    }
-                }
-
-                return await axios(config);
-            }
+        if (error.response?.status === 401) {
+            await logout();
+            throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
         }
         throw error;
     }
@@ -241,7 +222,7 @@ async function loadSpareparts() {
 
       let imageHtml = "";
       if (part.image) {
-        imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
+        imageHtml = `<img src="${API_URL}/api/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
       }
 
       card.innerHTML = `
@@ -275,7 +256,7 @@ async function loadAvailableSpareparts() {
 
         let imageHtml = "";
         if (part.image) {
-          imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
+          imageHtml = `<img src="${API_URL}/api/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
         }
 
         card.innerHTML = `
@@ -485,19 +466,23 @@ async function cancelOrder(orderId) {
 }
 
 // --- INISIALISASI ---
-window.onload = function() {
-    // Check jika user sudah login
-    refreshToken()
-        .then(success => {
-            if (success) {
-                // Akan menghandle redirect di refreshToken()
+// Modified window.onload
+window.onload = async function() {
+    try {
+        const success = await refreshToken();
+        if (success && currentUserRole) {
+            if (currentUserRole === 'admin') {
+                showAdminDashboard();
             } else {
-                showLogin();
+                showCustomerDashboard();
             }
-        })
-        .catch(() => {
+        } else {
             showLogin();
-        });
+        }
+    } catch (error) {
+        console.error("Initialization error:", error);
+        showLogin();
+    }
 };
 
 // --- Export fungsi untuk digunakan di HTML inline ---
