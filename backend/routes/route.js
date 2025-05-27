@@ -4,7 +4,6 @@ import express from 'express';
 
  import { login, register, logout } from '../controllers/usercontroller.js';
  import { verifyToken } from '../middleware/VerifyToken.js';
- import { refreshToken } from '../controllers/RefreshToken.js';
  
 
  import { getSpareparts, createSparepart, updateSparepart, deleteSparepart } from "../controllers/sparepartcontroller.js";
@@ -67,7 +66,6 @@ import express from 'express';
  router.post("/register", register);
  router.post("/login", login);
  router.get("/logout", logout);
- router.get("/token", refreshToken);
  
 
  export default router;

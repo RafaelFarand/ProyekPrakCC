@@ -1,4 +1,4 @@
-import User from "../models/usermodel.js"; // Import model User dari sequelize
+import User from "../models/usermodel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 async function getUser(req, res) {
   try {
     const users = await User.findAll({
-      attributes: ["id", "email", "username"], // Exclude sensitive fields
+      attributes: ["id", "email", "username"],
     });
     res.status(200).json(users);
   } catch (error) {
@@ -23,7 +23,6 @@ async function register(req, res) {
   try {
     const { email, username, password } = req.body;
 
-    // Check if user with this email already exists
     const existingUser = await User.findOne({
       where: {
         email: email,
@@ -37,19 +36,15 @@ async function register(req, res) {
       });
     }
 
-    // Hash the password
     const encryptPassword = await bcrypt.hash(password, 5);
 
-    // Create new user
     const newUser = await User.create({
       email,
       username,
       password: encryptPassword,
-      refresh_token: null,
-      role: "customer", // Default role
+      role: "customer",
     });
 
-    // Return success but don't include password in response
     const { password: _, ...userWithoutPassword } = newUser.toJSON();
 
     res.status(201).json({
@@ -68,35 +63,21 @@ async function register(req, res) {
 
 async function login(req, res) {
   try {
-    // Login menggunakan email dan password
     const { email, password } = req.body;
 
-    // Cek apakah email terdaftar
     const user = await User.findOne({
       where: {
         email: email,
       },
     });
 
-    // Kalo email ada (terdaftar)
     if (user) {
-      // Data User itu nanti bakalan dipake buat ngesign token
-      // Data user dari sequelize itu harus diubah dulu ke bentuk object
-      const userPlain = user.toJSON(); // Konversi ke object
+      const userPlain = user.toJSON();
+      const { password: _, ...safeUserData } = userPlain;
 
-      // Ngecek isi dari userplain (tidak wajib ditulis, cuma buat ngecek saja)
-      console.log(userPlain);
-
-      // Disini kita mau mengcopy isi dari variabel userPlain ke variabel baru namanya safeUserData
-      // Tapi di sini kita gamau copy semuanya, kita gamau copy password sama refresh_token karena itu sensitif
-      const { password: _, refresh_token: __, ...safeUserData } = userPlain;
-
-      // Ngecek apakah password sama kaya yg ada di DB
       const decryptPassword = await bcrypt.compare(password, user.password);
 
-      // Kalau password benar, artinya berhasil login
       if (decryptPassword) {
-        // Access token expire selama 30 detik
         const accessToken = jwt.sign(
           safeUserData,
           process.env.ACCESS_TOKEN_SECRET,
@@ -105,33 +86,6 @@ async function login(req, res) {
           }
         );
 
-        // Refresh token expire selama 1 hari
-        const refreshToken = jwt.sign(
-          safeUserData,
-          process.env.REFRESH_TOKEN_SECRET,
-          {
-            expiresIn: "1d",
-          }
-        );
-
-        // Update tabel refresh token pada DB
-        await User.update(
-          { refresh_token: refreshToken },
-          {
-            where: {
-              id: user.id,
-            },
-          }
-        );
-
-        // Masukkin refresh token ke cookie
-        res.cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-          secure: process.env.NODE_ENV === "production",
-        });
-
-        // Kirim respons berhasil (200)
         res.status(200).json({
           status: "Succes",
           message: "Login Berhasil",
@@ -139,13 +93,11 @@ async function login(req, res) {
           accessToken,
         });
       } else {
-        // Kalau password salah
         const error = new Error("Password atau email salah");
         error.statusCode = 400;
         throw error;
       }
     } else {
-      // Kalau email salah
       const error = new Error("Password atau email salah");
       error.statusCode = 400;
       throw error;
@@ -159,37 +111,7 @@ async function login(req, res) {
 }
 
 async function logout(req, res) {
-  // mengecek refresh token sama gak sama di database
-  const refreshToken = req.cookies.refreshToken;
-
-  // Kalo ga sama atau ga ada kirim status code 204
-  if (!refreshToken) return res.sendStatus(204);
-
-  // Kalau sama, cari user berdasarkan refresh token tadi
-  const user = await User.findOne({
-    where: {
-      refresh_token: refreshToken,
-    },
-  });
-
-  // Kalau user gaada, kirim status code 204
-  if (!user.refresh_token) return res.sendStatus(204);
-
-  // Kalau user ketemu, ambil user id
-  const userId = user.id;
-
-  // Hapus refresh token dari DB berdasarkan user id tadi
-  await User.update(
-    { refresh_token: null },
-    {
-      where: {
-        id: userId,
-      },
-    }
-  );
-
-  // Ngehapus cookies yg tersimpan
-  res.clearCookie("refreshToken");
+  // Tidak perlu hapus refresh token, cukup kirim status sukses
   return res.sendStatus(200);
 }
 
