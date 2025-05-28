@@ -16,7 +16,7 @@ import "./models/cartmodel.js"; // Import cart model baru
 import router from "./routes/route.js";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const _dirname = path.dirname(_filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
