@@ -20,6 +20,9 @@ const __dirname = path.dirname(__filename);
 
 
 const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
 
 // Buat folder uploads jika belum ada
 const uploadsDir = path.join(__dirname, 'uploads');
