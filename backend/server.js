@@ -27,9 +27,8 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const express = require('express');
-const cors = require('cors');
 const app = express();
+const cors = require('cors');
 
 app.use(cors()); // Izinkan semua origin, atau atur origin tertentu di sini
 
