@@ -25,6 +25,15 @@ steps:
       "--region",
       "us-central1",
       "--allow-unauthenticated",
+      "--set-env-vars",
+      "DB_HOST=${_DB_HOST},
+      DB_USER=${_DB_USER},
+      DB_PASSWORD=${_DB_PASSWORD},
+      DB_NAME=${_DB_NAME},
+      GOOGLE_APPLICATION_CREDENTIALS=${_GOOGLE_APPLICATION_CREDENTIALS},
+      GOOGLE_CLOUD_PROJECT=${PROJECT_ID}",
+      
+      
       ]
 
 
