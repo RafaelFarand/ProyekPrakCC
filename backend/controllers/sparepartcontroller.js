@@ -155,3 +155,4 @@ export async function deleteSparepart(req, res) {
         res.status(500).json({ message: "Gagal menghapus sparepart: " + err.message });
     }
 }
+

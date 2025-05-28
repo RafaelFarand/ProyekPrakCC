@@ -1,4 +1,3 @@
-
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -30,7 +29,7 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Middleware
 app.use(cors({
-    origin: 'https://fe-040-dot-b-01-450713.uc.r.appspot.com',
+    origin: ['http://localhost:5500', 'http://127.0.0.1:5500'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

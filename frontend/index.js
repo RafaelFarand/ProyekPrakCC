@@ -1,156 +1,114 @@
-// API URL Configuration
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? "http://localhost:5000"  // Remove /api here
-    : "https://notes-1061342868557.us-central1.run.app";
-
-// Global variables
-let accessToken = localStorage.getItem('accessToken');
-let currentUserId = localStorage.getItem('userId');
-let currentUserRole = localStorage.getItem('userRole');
+const API_URL = "http://localhost:5000";
+let accessToken = "";
+let currentUserId = null;
+let currentUserRole = "customer";
 let editingSparepartId = null;
 
-// Axios Configuration
+// Mengatur Axios untuk mengirim cookies
 axios.defaults.withCredentials = true;
-
-// Token refresh interceptor
-axios.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        if (error.response?.status === 403 && !error.config._retry) {
-            error.config._retry = true;
-            try {
-                const response = await axios.get(`${API_URL}/api/token`);
-                const newToken = response.data.accessToken;
-                localStorage.setItem('accessToken', newToken);
-                accessToken = newToken;
-                error.config.headers['Authorization'] = `Bearer ${newToken}`;
-                return axios(error.config);
-            } catch (refreshError) {
-                await logout();
-                return Promise.reject(refreshError);
-            }
-        }
-        return Promise.reject(error);
-    }
-);
 
 // --- NAVIGASI ---
 function showLogin() {
-  document.getElementById("loginSection").classList.remove("hidden");
-  document.getElementById("registerSection").classList.add("hidden");
-  document.getElementById("adminDashboard").classList.add("hidden");
-  document.getElementById("customerDashboard").classList.add("hidden");
+    document.getElementById('loginSection').classList.remove('hidden');
+    document.getElementById('registerSection').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
 }
 
 function showRegister() {
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("registerSection").classList.remove("hidden");
-  document.getElementById("adminDashboard").classList.add("hidden");
-  document.getElementById("customerDashboard").classList.add("hidden");
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('registerSection').classList.remove('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
 }
 
 function showAdminDashboard() {
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("registerSection").classList.add("hidden");
-  document.getElementById("adminDashboard").classList.remove("hidden");
-  document.getElementById("customerDashboard").classList.add("hidden");
-  loadSpareparts();
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('registerSection').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.remove('hidden');
+    document.getElementById('customerDashboard').classList.add('hidden');
+    loadSpareparts();
 }
 
 function showCustomerDashboard() {
-  document.getElementById("loginSection").classList.add("hidden");
-  document.getElementById("registerSection").classList.add("hidden");
-  document.getElementById("adminDashboard").classList.add("hidden");
-  document.getElementById("customerDashboard").classList.remove("hidden");
-  loadAvailableSpareparts();
-  loadMyOrders();
+    document.getElementById('loginSection').classList.add('hidden');
+    document.getElementById('registerSection').classList.add('hidden');
+    document.getElementById('adminDashboard').classList.add('hidden');
+    document.getElementById('customerDashboard').classList.remove('hidden');
+    loadAvailableSpareparts();
+    loadMyOrders();
 }
 
 function showAddForm() {
-  // Reset form untuk penambahan baru
-  document.getElementById("sparepartForm").classList.remove("hidden");
-  document.getElementById("sparepartName").value = "";
-  document.getElementById("sparepartStock").value = "";
-  document.getElementById("sparepartPrice").value = "";
-  document.getElementById("sparepartImage").value = "";
-  editingSparepartId = null;
+    document.getElementById('sparepartForm').classList.remove('hidden');
+    document.getElementById('sparepartName').value = '';
+    document.getElementById('sparepartStock').value = '';
+    document.getElementById('sparepartPrice').value = '';
+    document.getElementById('sparepartImage').value = '';
+    editingSparepartId = null;
 }
 
 // --- AUTENTIKASI ---
-// Modified register function
 async function register() {
+    const email = document.getElementById('regEmail').value;
+    const username = document.getElementById('regUsername').value;
+    const password = document.getElementById('regPassword').value;
+
+    if (!email || !username || !password) {
+        alert('Semua field harus diisi!');
+        return;
+    }
+
     try {
-        const email = document.getElementById('regEmail').value;
-        const username = document.getElementById('regUsername').value;
-        const password = document.getElementById('regPassword').value;
-
-        if (!email || !username || !password) {
-            alert('Semua field harus diisi!');
-            return;
-        }
-
-        await axios.post(`${API_URL}/api/register`, {
+        const response = await axios.post(`${API_URL}/register`, {
             email,
             username,
             password
         });
-
         alert('Registrasi berhasil! Silakan login.');
         showLogin();
     } catch (error) {
-        console.error("Error registrasi:", error);
-        alert(error.response?.data?.message || 'Registrasi gagal! Pastikan email belum terdaftar.');
+        console.error('Register error:', error);
+        alert(`Registrasi gagal: ${error.response?.data?.message || error.message}`);
     }
 }
 
-// Modified login function
 async function login() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+        alert('Email dan password harus diisi!');
+        return;
+    }
+
     try {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-
-        if (!email || !password) {
-            alert('Email dan password harus diisi!');
-            return;
-        }
-
-        const response = await axios.post(`${API_URL}/api/login`, {
+        const response = await axios.post(`${API_URL}/login`, {
             email,
             password
         });
 
-        const { accessToken: token, user } = response.data;
-        
-        accessToken = token;
-        currentUserId = user.id;
-        currentUserRole = user.role;
+        accessToken = response.data.accessToken;
+        currentUserId = response.data.safeUserData.id;
+        currentUserRole = response.data.safeUserData.username.toLowerCase().includes('admin') ? 'admin' : 'customer';
 
-        localStorage.setItem('accessToken', token);
-        localStorage.setItem('userId', user.id);
-        localStorage.setItem('userRole', user.role);
-
-        if (user.role === 'admin') {
+        if (currentUserRole === 'admin') {
             showAdminDashboard();
         } else {
             showCustomerDashboard();
         }
     } catch (error) {
-        console.error("Error login:", error);
-        alert('Login gagal! Periksa email dan password Anda.');
+        console.error('Login error:', error);
+        alert(`Login gagal: ${error.response?.data?.message || error.message}`);
     }
 }
 
 async function logout() {
     try {
-        await axios.get(`${API_URL}/api/logout`, {
-            withCredentials: true  // **Tambah ini**
-        });
-        accessToken = '';
-        currentUserId = null;
-        showLogin();
+        await axios.get(`${API_URL}/logout`);
     } catch (error) {
         console.error("Logout error:", error);
-        // Tetap logout meskipun gagal
+    } finally {
         accessToken = '';
         currentUserId = null;
         showLogin();
@@ -158,184 +116,211 @@ async function logout() {
 }
 
 // --- TOKEN REFRESH ---
-// Modified refreshToken function
 async function refreshToken() {
     try {
-        const response = await axios.get(`${API_URL}/api/token`, {
-            withCredentials: true
-        });
-        
-        if (response.data.accessToken) {
-            accessToken = response.data.accessToken;
-            return true;
-        }
-        return false;
+        const response = await axios.get(`${API_URL}/token`);
+        accessToken = response.data.accessToken;
+        return true;
     } catch (error) {
         console.error("Token refresh failed:", error);
-        await logout();
+        accessToken = '';
+        currentUserId = null;
         return false;
     }
 }
 
-// --- API HELPER ---
-// Modified apiCall function
-async function apiCall(method, endpoint, data = null, formData = false) {
+// --- API HELPER (PERBAIKAN) ---
+async function apiCall(method, endpoint, data = null, isFormData = false) {
     try {
         const config = {
             method,
-            url: `${API_URL}/api${endpoint}`, // Add /api here
+            url: `${API_URL}${endpoint}`,
             headers: {
                 'Authorization': `Bearer ${accessToken}`
-            },
-            withCredentials: true
+            }
         };
 
         if (data) {
             config.data = data;
-            if (formData) {
-                config.headers['Content-Type'] = 'multipart/form-data';
+            if (!isFormData) {
+                config.headers['Content-Type'] = 'application/json';
             }
+            // Untuk FormData, biarkan browser set Content-Type otomatis
         }
 
-        const response = await axios(config);
-        return response.data;
+        return await axios(config);
     } catch (error) {
-        if (error.response?.status === 401) {
-            await logout();
-            throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
+        if (error.response && error.response.status === 403) {
+            const refreshed = await refreshToken();
+            if (refreshed) {
+                // Retry dengan token baru
+                const retryConfig = {
+                    method,
+                    url: `${API_URL}${endpoint}`,
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                };
+
+                if (data) {
+                    retryConfig.data = data;
+                    if (!isFormData) {
+                        retryConfig.headers['Content-Type'] = 'application/json';
+                    }
+                }
+
+                return await axios(retryConfig);
+            } else {
+                showLogin();
+            }
         }
         throw error;
     }
 }
 
-// --- SPAREPART MANAGEMENT ---
+// --- SPAREPART MANAGEMENT (PERBAIKAN) ---
 async function loadSpareparts() {
-  try {
-    const response = await apiCall("get", "/spareparts");
-    const spareparts = response.data;
-    const container = document.getElementById("sparepartsList");
-    container.innerHTML = "";
+    try {
+        const response = await apiCall('get', '/spareparts');
+        const spareparts = response.data;
+        const container = document.getElementById('sparepartsList');
+        container.innerHTML = '';
 
-    spareparts.forEach((part) => {
-      const card = document.createElement("div");
-      card.className = "card";
+        if (spareparts.length === 0) {
+            container.innerHTML = '<p>Belum ada sparepart.</p>';
+            return;
+        }
 
-      let imageHtml = "";
-      if (part.image) {
-        imageHtml = `<img src="${API_URL}/api/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
-      }
-
-      card.innerHTML = `
+        spareparts.forEach(part => {
+            const card = document.createElement('div');
+            card.className = 'sparepart-card';
+            let imageHtml = '';
+            if (part.image) {
+                imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">`;
+            }
+            card.innerHTML = `
                 ${imageHtml}
                 <h3>${part.name}</h3>
                 <p>Stok: ${part.stock}</p>
-                <p>Harga: Rp${part.price}</p>
-                <button onclick="editSparepart(${part.id})">Edit</button>
-                <button onclick="deleteSparepart(${part.id})">Hapus</button>
+                <p>Harga: Rp${Number(part.price).toLocaleString('id-ID')}</p>
+                <div class="card-actions">
+                    <button onclick="editSparepart(${part.id})">Edit</button>
+                    <button onclick="deleteSparepart(${part.id})" style="background:#d32f2f;color:white;">Hapus</button>
+                </div>
             `;
-      container.appendChild(card);
-    });
-  } catch (error) {
-    console.error("Error loading spareparts:", error);
-    alert("Gagal memuat data sparepart");
-  }
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Error loading spareparts:", error);
+        alert("Gagal memuat data sparepart");
+    }
 }
 
 async function loadAvailableSpareparts() {
-  try {
-    const response = await apiCall("get", "/spareparts");
-    const spareparts = response.data;
-    const container = document.getElementById("availableSpareparts");
-    container.innerHTML = "";
+    try {
+        const response = await apiCall('get', '/spareparts');
+        const spareparts = response.data;
+        const container = document.getElementById('availableSpareparts');
+        container.innerHTML = '';
 
-    spareparts.forEach((part) => {
-      if (part.stock > 0) {
-        // Hanya tampilkan yang ada stoknya
-        const card = document.createElement("div");
-        card.className = "card";
-
-        let imageHtml = "";
-        if (part.image) {
-          imageHtml = `<img src="${API_URL}/api/uploads/${part.image}" alt="${part.name}" style="max-width: 100%; height: auto;">`;
+        const availableSpareparts = spareparts.filter(part => part.stock > 0);
+        
+        if (availableSpareparts.length === 0) {
+            container.innerHTML = '<p>Tidak ada sparepart yang tersedia saat ini.</p>';
+            return;
         }
 
-        card.innerHTML = `
-                    ${imageHtml}
-                    <h3>${part.name}</h3>
-                    <p>Stok: ${part.stock}</p>
-                    <p>Harga: Rp${part.price}</p>
-                    <input type="number" id="qty-${part.id}" min="1" max="${part.stock}" value="1">
-                    <button onclick="buySparepart(${part.id})">Beli</button>
-                `;
-        container.appendChild(card);
-      }
-    });
-  } catch (error) {
-    console.error("Error loading available spareparts:", error);
-    alert("Gagal memuat data sparepart");
-  }
+        availableSpareparts.forEach(part => {
+            const card = document.createElement('div');
+            card.className = 'sparepart-card';
+            let imageHtml = '';
+            if (part.image) {
+                imageHtml = `<img src="${API_URL}/uploads/${part.image}" alt="${part.name}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNS41IDQwLjVIMjguNVYzMy41SDM1LjVWNDAuNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'">`;
+            }
+            card.innerHTML = `
+                ${imageHtml}
+                <h3>${part.name}</h3>
+                <p>Stok: ${part.stock}</p>
+                <p>Harga: Rp${Number(part.price).toLocaleString('id-ID')}</p>
+                <input type="number" id="qty-${part.id}" min="1" max="${part.stock}" value="1" style="width:80px;margin:8px auto;display:block;">
+                <button onclick="buySparepart(${part.id})" style="background:#2366b3;color:white;">Beli</button>
+            `;
+            container.appendChild(card);
+        });
+    } catch (error) {
+        console.error("Error loading available spareparts:", error);
+        alert("Gagal memuat data sparepart");
+    }
 }
 
 async function editSparepart(id) {
-  try {
-    // Ambil data sparepart yang akan diedit
-    const response = await apiCall("get", "/spareparts");
-    const sparepart = response.data.find((part) => part.id === id);
+    try {
+        const response = await apiCall('get', '/spareparts');
+        const sparepart = response.data.find(part => part.id === id);
 
-    if (!sparepart) {
-      alert("Sparepart tidak ditemukan!");
-      return;
+        if (!sparepart) {
+            alert('Sparepart tidak ditemukan!');
+            return;
+        }
+
+        document.getElementById('sparepartName').value = sparepart.name;
+        document.getElementById('sparepartStock').value = sparepart.stock;
+        document.getElementById('sparepartPrice').value = sparepart.price;
+        document.getElementById('sparepartForm').classList.remove('hidden');
+
+        editingSparepartId = id;
+    } catch (error) {
+        console.error("Error fetching sparepart for edit:", error);
+        alert("Gagal mengambil data sparepart");
     }
-
-    // Set form untuk editing
-    document.getElementById("sparepartName").value = sparepart.name;
-    document.getElementById("sparepartStock").value = sparepart.stock;
-    document.getElementById("sparepartPrice").value = sparepart.price;
-    document.getElementById("sparepartForm").classList.remove("hidden");
-
-    // Simpan ID untuk nanti
-    editingSparepartId = id;
-  } catch (error) {
-    console.error("Error fetching sparepart for edit:", error);
-    alert("Gagal mengambil data sparepart");
-  }
 }
 
+// PERBAIKAN UTAMA: saveSparepart function
 async function saveSparepart() {
     const name = document.getElementById('sparepartName').value;
     const stock = document.getElementById('sparepartStock').value;
     const price = document.getElementById('sparepartPrice').value;
     const imageInput = document.getElementById('sparepartImage');
-    
+
     if (!name || !stock || !price) {
-        alert('Semua field harus diisi kecuali gambar!');
+        alert('Nama, stok, dan harga harus diisi!');
         return;
     }
-    
+
+    // Validasi untuk penambahan baru (harus ada gambar)
+    if (!editingSparepartId && (!imageInput.files || imageInput.files.length === 0)) {
+        alert('Gambar wajib diupload untuk sparepart baru!');
+        return;
+    }
+
     try {
         const formData = new FormData();
         formData.append('name', name);
         formData.append('stock', stock);
         formData.append('price', price);
-        formData.append('supplierId', 1); // Default supplier ID
-        
-        if (imageInput.files[0]) {
+
+        // Tambahkan file jika ada
+        if (imageInput.files && imageInput.files.length > 0) {
             formData.append('image', imageInput.files[0]);
         }
-        
+
+        let response;
         if (editingSparepartId) {
-            // Update existing sparepart
-            await apiCall('put', `/spareparts/${editingSparepartId}`, formData, true);
+            response = await apiCall('put', `/spareparts/${editingSparepartId}`, formData, true);
             alert('Sparepart berhasil diperbarui!');
         } else {
-            // Create new sparepart
-            await apiCall('post', '/spareparts', formData, true);
+            response = await apiCall('post', '/spareparts', formData, true);
             alert('Sparepart berhasil ditambahkan!');
         }
-        
-        // Reset form and reload
+
+        // Reset form
         document.getElementById('sparepartForm').classList.add('hidden');
+        document.getElementById('sparepartName').value = '';
+        document.getElementById('sparepartStock').value = '';
+        document.getElementById('sparepartPrice').value = '';
+        document.getElementById('sparepartImage').value = '';
         editingSparepartId = null;
+        
         loadSpareparts();
     } catch (error) {
         console.error("Error saving sparepart:", error);
@@ -344,156 +329,112 @@ async function saveSparepart() {
 }
 
 async function deleteSparepart(id) {
-  if (!confirm("Apakah Anda yakin ingin menghapus sparepart ini?")) {
-    return;
-  }
+    if (!confirm('Apakah Anda yakin ingin menghapus sparepart ini? Semua data pembelian terkait juga akan dihapus.')) {
+        return;
+    }
 
-  try {
-    await apiCall("delete", `/spareparts/${id}`);
-    alert("Sparepart berhasil dihapus!");
-    loadSpareparts();
-  } catch (error) {
-    console.error("Error deleting sparepart:", error);
-    alert(
-      `Gagal menghapus data: ${error.response?.data?.message || error.message}`
-    );
-  }
+    try {
+        await apiCall('delete', `/spareparts/${id}`);
+        alert('Sparepart berhasil dihapus!');
+        loadSpareparts();
+    } catch (error) {
+        console.error("Error deleting sparepart:", error);
+        alert(`Gagal menghapus data: ${error.response?.data?.message || error.message}`);
+    }
 }
 
 // --- PEMBELIAN MANAGEMENT ---
 async function buySparepart(sparepartId) {
-  const qtyInput = document.getElementById(`qty-${sparepartId}`);
-  const jumlah = parseInt(qtyInput.value, 10);
+    const qtyInput = document.getElementById(`qty-${sparepartId}`);
+    const jumlah = parseInt(qtyInput.value, 10);
 
-  if (!jumlah || jumlah < 1) {
-    alert("Jumlah pembelian harus minimal 1!");
-    return;
-  }
+    if (!jumlah || jumlah < 1) {
+        alert('Jumlah pembelian harus minimal 1!');
+        return;
+    }
 
-  try {
-    const orderData = {
-      id_user: currentUserId,
-      id_sparepart: sparepartId,
-      jumlah: jumlah,
-    };
+    try {
+        const orderData = {
+            id_user: currentUserId,
+            id_sparepart: sparepartId,
+            jumlah: jumlah
+        };
 
-    await apiCall("post", "/pembelian", orderData);
-    alert("Pembelian berhasil!");
-    loadMyOrders();
-    loadAvailableSpareparts(); // Reload untuk mendapatkan stok terbaru
-  } catch (error) {
-    console.error("Error creating order:", error);
-    alert(
-      `Gagal melakukan pembelian: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
+        await apiCall('post', '/pembelian', orderData);
+        alert('Pembelian berhasil!');
+        loadMyOrders();
+        loadAvailableSpareparts();
+    } catch (error) {
+        console.error("Error creating order:", error);
+        alert(`Gagal melakukan pembelian: ${error.response?.data?.message || error.message}`);
+    }
 }
 
 async function loadMyOrders() {
-  try {
-    const response = await apiCall("get", `/pembelian/${currentUserId}`);
-    const orders = response.data;
-    const container = document.getElementById("myOrders");
-    container.innerHTML = "";
+    try {
+        const response = await apiCall('get', `/pembelian/${currentUserId}`);
+        const orders = response.data;
+        const container = document.getElementById('myOrders');
+        container.innerHTML = '';
 
-    if (orders.length === 0) {
-      container.innerHTML = "<p>Belum ada pesanan.</p>";
-      return;
-    }
+        if (orders.length === 0) {
+            container.innerHTML = '<p>Belum ada pesanan.</p>';
+            return;
+        }
 
-    const orderTable = document.createElement("table");
-    orderTable.style.width = "100%";
-    orderTable.style.borderCollapse = "collapse";
-    orderTable.innerHTML = `
+        const orderTable = document.createElement('table');
+        orderTable.style.width = '100%';
+        orderTable.style.borderCollapse = 'collapse';
+        orderTable.innerHTML = `
             <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Nama Sparepart</th>
-                    <th>Jumlah</th>
-                    <th>Harga Satuan</th>
-                    <th>Total</th>
-                    <th>Aksi</th>
+                <tr style="background:#f5f5f5;">
+                    <th style="padding:8px;border:1px solid #ddd;">No</th>
+                    <th style="padding:8px;border:1px solid #ddd;">Nama Sparepart</th>
+                    <th style="padding:8px;border:1px solid #ddd;">Jumlah</th>
+                    <th style="padding:8px;border:1px solid #ddd;">Harga Satuan</th>
+                    <th style="padding:8px;border:1px solid #ddd;">Total</th>
+                    <th style="padding:8px;border:1px solid #ddd;">Aksi</th>
                 </tr>
             </thead>
             <tbody id="orderTableBody"></tbody>
         `;
 
-    container.appendChild(orderTable);
-    const tableBody = document.getElementById("orderTableBody");
+        container.appendChild(orderTable);
+        const tableBody = document.getElementById('orderTableBody');
 
-    orders.forEach((order, index) => {
-      const total = order.jumlah * order.sparepart.price;
-      const row = document.createElement("tr");
-      row.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${order.sparepart.name}</td>
-                <td>${order.jumlah}</td>
-                <td>Rp${order.sparepart.price}</td>
-                <td>Rp${total}</td>
-                <td>
-                    <button onclick="cancelOrder(${order.id})">Batalkan</button>
+        orders.forEach((order, index) => {
+            const total = order.jumlah * order.sparepart.price;
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding:8px;border:1px solid #ddd;text-align:center;">${index + 1}</td>
+                <td style="padding:8px;border:1px solid #ddd;">${order.sparepart.name}</td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:center;">${order.jumlah}</td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:right;">Rp${Number(order.sparepart.price).toLocaleString('id-ID')}</td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:right;">Rp${Number(total).toLocaleString('id-ID')}</td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:center;">
+                    <button onclick="cancelOrder(${order.id})" style="background:#d32f2f;color:white;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;">Batalkan</button>
                 </td>
             `;
-      tableBody.appendChild(row);
-    });
-  } catch (error) {
-    console.error("Error loading orders:", error);
-    document.getElementById("myOrders").innerHTML =
-      "<p>Gagal memuat data pesanan.</p>";
-  }
+            tableBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Error loading orders:", error);
+        document.getElementById('myOrders').innerHTML = '<p>Gagal memuat data pesanan.</p>';
+    }
 }
 
 async function cancelOrder(orderId) {
-  if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) {
-    return;
-  }
-
-  try {
-    await apiCall("delete", `/pembelian/${orderId}`);
-    alert("Pesanan berhasil dibatalkan!");
-    loadMyOrders();
-    loadAvailableSpareparts(); // Reload untuk mendapatkan stok terbaru
-  } catch (error) {
-    console.error("Error canceling order:", error);
-    alert(
-      `Gagal membatalkan pesanan: ${
-        error.response?.data?.message || error.message
-      }`
-    );
-  }
-}
-
-// --- INISIALISASI ---
-// Modified window.onload
-window.onload = async function() {
-    try {
-        const success = await refreshToken();
-        if (success && currentUserRole) {
-            if (currentUserRole === 'admin') {
-                showAdminDashboard();
-            } else {
-                showCustomerDashboard();
-            }
-        } else {
-            showLogin();
-        }
-    } catch (error) {
-        console.error("Initialization error:", error);
-        showLogin();
+    if (!confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
+        return;
     }
-};
 
-// --- Export fungsi untuk digunakan di HTML inline ---
-window.showLogin = showLogin;
-window.showRegister = showRegister;
-window.register = register;
-window.login = login;
-window.logout = logout;
-window.showAddForm = showAddForm;
-window.saveSparepart = saveSparepart;
-window.editSparepart = editSparepart;
-window.deleteSparepart = deleteSparepart;
-window.buySparepart = buySparepart;
-window.cancelOrder = cancelOrder;
+    try {
+        await apiCall('delete', `/pembelian/${orderId}`);
+        alert('Pesanan berhasil dibatalkan!');c
+        loadMyOrders();
+        loadAvailableSpareparts();
+    } catch (error) {
+        console.error("Error canceling order:", error);
+        alert(`Gagal membatalkan pesanan: ${error.response?.data?.message || error.message}`);
+    }
+}

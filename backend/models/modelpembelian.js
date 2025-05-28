@@ -29,7 +29,6 @@ const FormPembelian = db.define("form_pembelian", {
 FormPembelian.belongsTo(User, { foreignKey: "id_user" });
 FormPembelian.belongsTo(Sparepart, { 
     foreignKey: "id_sparepart",
-    onDelete: 'CASCADE' 
+    onDelete: 'CASCADE'
 });
-
 export default FormPembelian;

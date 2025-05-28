@@ -1,6 +1,6 @@
-import Users from "../models/usermodel.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import User from '../models/usermodel.js'; // Import model User dari sequelize
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Get all users
 async function getUser(req, res) {
@@ -11,9 +11,9 @@ async function getUser(req, res) {
     res.status(200).json(users);
   } catch (error) {
     console.log(error.message);
-    res.status(500).json({
-      status: "Error",
-      message: error.message,
+    res.status(500).json({ 
+      status: "Error", 
+      message: error.message 
     });
   }
 }
