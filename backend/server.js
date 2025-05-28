@@ -31,15 +31,15 @@ app.use(cors({
 }));
 
 app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-      res.header("Access-Control-Allow-Origin", "https://fe-040-dot-b-01-450713.uc.r.appspot.com");
-      res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-      res.header("Access-Control-Allow-Credentials", "true");
-      return res.sendStatus(200);
-    }
-    next();
-  });
+  if (req.method === 'OPTIONS') {
+    res.header("Access-Control-Allow-Origin", "https://fe-040-dot-b-01-450713.uc.r.appspot.com");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.header("Access-Control-Allow-Credentials", "true");
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
